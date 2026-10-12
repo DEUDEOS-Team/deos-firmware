@@ -155,7 +155,7 @@ SRC
 \]
 
 Burada:
-\begin{itemize}[nosep]
+\begin{itemize}
     \item \(P\): Priority,
     \item \(C\): Message Class,
     \item \(S\): Service ID,
@@ -248,6 +248,7 @@ Node ID & Symbol & Fiziksel Cihaz & Görev \\
 \hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik sistemi kontrolü \\
 \hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon sistemi kontrolü \\
 \hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Fren sistemi kontrolü \\
+\hex{14} & \code{DEOS\_NODE\_LIGHTING} & STM32 / Aydınlatma ECU & Aydınlatma ve sinyalizasyon kontrolü \\
 \hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & DALY BMS \#1 & Ana batarya BMS \\
 \hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & DALY BMS \#2 & Yardımcı batarya BMS \\
 \hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway & Classic CAN--CAN-FD çevirici \\
@@ -283,6 +284,7 @@ typedef enum
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
     DEOS_NODE_BRAKE          = 0x12,
+    DEOS_NODE_LIGHTING       = 0x14,
 
     DEOS_NODE_BMS_MAIN       = 0x20,
     DEOS_NODE_BMS_AUX        = 0x21,
@@ -388,7 +390,9 @@ Service ID & Symbol & Amaç \\
 \hex{04} & \code{DEOS\_SERVICE\_BMS} & Batarya ve BMS verileri \\
 \hex{05} & \code{DEOS\_SERVICE\_CALIBRATION} & Kalibrasyon işlemleri \\
 \hex{06} & \code{DEOS\_SERVICE\_DIAGNOSTIC} & Fault / sağlık / diagnostik \\
-\hex{07}--\hex{3F} & Reserved & Yeni servisler için ayrılmış alan \\
+\hex{07} & \code{DEOS\_SERVICE\_SENSORS} & Sensör ve IMU veri servisi \\
+\hex{08} & \code{DEOS\_SERVICE\_LIGHTING} & Aydınlatma ve sinyalizasyon sistemi \\
+\hex{09}--\hex{3F} & Reserved & Yeni servisler için ayrılmış alan \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -402,7 +406,9 @@ typedef enum
     DEOS_SERVICE_BRAKE       = 0x03,
     DEOS_SERVICE_BMS         = 0x04,
     DEOS_SERVICE_CALIBRATION = 0x05,
-    DEOS_SERVICE_DIAGNOSTIC  = 0x06
+    DEOS_SERVICE_DIAGNOSTIC  = 0x06,
+    DEOS_SERVICE_SENSORS     = 0x07,
+    DEOS_SERVICE_LIGHTING    = 0x08
 } deos_service_id_t;
 \end{lstlisting}
 
@@ -417,20 +423,21 @@ Aşağıdaki tablo temel service handler sahipliğini gösterir. Her adreslenebi
 ayrıca bu ICD'de tanımlanan ortak SYSTEM/NETWORK PING--PONG davranışını desteklemek zorundadır.
 
 \begin{center}
-\begin{tabularx}{\textwidth}{l *{7}{>{\centering\arraybackslash}X}}
+\begin{tabularx}{\textwidth}{l *{8}{>{\centering\arraybackslash}X}}
 \toprule
-Node & SYS & TRAC & STEER & BRAKE & BMS & CAL & DIAG \\
+Node & SYS & TRAC & STEER & BRAKE & BMS & CAL & DIAG & LIGHT \\
 \midrule
-TEXTUAL & X & -- & -- & -- & -- & -- & X \\
-GROUND\_CONTROL & X & -- & -- & -- & -- & -- & X \\
-MAIN\_STM32 & X & X & X & X & X & X & X \\
-MICRO\_ROS & X & -- & -- & -- & -- & -- & X \\
-TRACTION & X & X & -- & -- & -- & X & X \\
-STEERING & X & -- & X & -- & -- & X & X \\
-BRAKE & X & -- & -- & X & -- & X & X \\
-BMS\_MAIN & X & -- & -- & -- & X & -- & X \\
-BMS\_AUX & X & -- & -- & -- & X & -- & X \\
-BMS\_GATEWAY & X & -- & -- & -- & X & -- & X \\
+TEXTUAL & X & -- & -- & -- & -- & -- & X & -- \\
+GROUND\_CONTROL & X & -- & -- & -- & -- & -- & X & -- \\
+MAIN\_STM32 & X & X & X & X & X & X & X & X \\
+MICRO\_ROS & X & -- & -- & -- & -- & -- & X & -- \\
+TRACTION & X & X & -- & -- & -- & X & X & -- \\
+STEERING & X & -- & X & -- & -- & X & X & -- \\
+BRAKE & X & -- & -- & X & -- & X & X & -- \\
+LIGHTING & X & -- & -- & -- & -- & -- & X & X \\
+BMS\_MAIN & X & -- & -- & -- & X & -- & X & -- \\
+BMS\_AUX & X & -- & -- & -- & X & -- & X & -- \\
+BMS\_GATEWAY & X & -- & -- & -- & X & -- & X & -- \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -637,6 +644,74 @@ typedef enum
     DEOS_CMD_DIAG_CLEAR_FAULTS = 0x03
 } deos_diagnostic_command_t;
 \end{lstlisting}
+
+\subsection{LIGHTING Service Komutları}
+
+Aydınlatma ve sinyalizasyon servisi (\code{DEOS\_SERVICE\_LIGHTING} = \hex{08}) araçtaki tüm aydınlatma elemanlarını yönetir.
+
+\begin{center}
+\begin{tabular}{c l}
+\toprule
+ID & Symbol \\
+\midrule
+\hex{01} & \code{DEOS\_CMD\_LIGHTING\_SET\_STATE} \\
+\hex{02} & \code{DEOS\_CMD\_LIGHTING\_TURN\_ON} \\
+\hex{03} & \code{DEOS\_CMD\_LIGHTING\_TURN\_OFF} \\
+\hex{04} & \code{DEOS\_CMD\_LIGHTING\_SET\_ALL} \\
+\hex{05} & \code{DEOS\_CMD\_LIGHTING\_GET\_STATUS} \\
+\hex{06} & \code{DEOS\_CMD\_LIGHTING\_STATUS} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[style=cstyle]
+typedef enum
+{
+    DEOS_CMD_LIGHTING_SET_STATE  = 0x01,
+    DEOS_CMD_LIGHTING_TURN_ON    = 0x02,
+    DEOS_CMD_LIGHTING_TURN_OFF   = 0x03,
+    DEOS_CMD_LIGHTING_SET_ALL    = 0x04,
+    DEOS_CMD_LIGHTING_GET_STATUS = 0x05,
+    DEOS_CMD_LIGHTING_STATUS     = 0x06
+} deos_lighting_command_t;
+\end{lstlisting}
+
+\subsubsection{Far ve Lamba Adresleri (Light ID)}
+
+Komut payload'ında hangi aydınlatma elemanının hedeflendiği 8-bit \code{Light ID} ile belirtilir:
+
+\begin{center}
+\begin{tabular}{c l l}
+\toprule
+Adres & Sembolik İsim & Açıklama \\
+\midrule
+\hex{01} & \code{DEOS\_LIGHT\_HEADLIGHT} & Ön Farlar \\
+\hex{02} & \code{DEOS\_LIGHT\_BRAKE} & Fren Lambası \\
+\hex{03} & \code{DEOS\_LIGHT\_TURN\_LEFT} & Sol Sinyal \\
+\hex{04} & \code{DEOS\_LIGHT\_TURN\_RIGHT} & Sağ Sinyal \\
+\hex{05} & \code{DEOS\_LIGHT\_HAZARD} & Dörtlü Flaşör \\
+\hex{FF} & \code{DEOS\_LIGHT\_ALL} & Tüm Işıklar \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Far Durum Kodları (State)}
+
+\begin{center}
+\begin{tabular}{c l l}
+\toprule
+Kod & Sembolik İsim & Durum \\
+\midrule
+\hex{00} & \code{DEOS\_LIGHT\_STATE\_OFF} & Kapalı \\
+\hex{01} & \code{DEOS\_LIGHT\_STATE\_ON} & Açık \\
+\hex{02} & \code{DEOS\_LIGHT\_STATE\_BLINK} & Flaşör (Sinyal 1 Hz) \\
+\hex{03} & \code{DEOS\_LIGHT\_STATE\_FAST\_BLINK} & Hızlı Flaşör (Acil 4 Hz) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\code{DEOS\_CMD\_LIGHTING\_SET\_STATE} (\hex{01}) komutunun payload'ı 2 byte'tır:
+\code{Byte 0 = Light ID}, \code{Byte 1 = State}.
 
 \section{CONFIG Message Class ve Parameter Registry}
 
@@ -989,7 +1064,7 @@ RESPONSE Message Class protokolde ayrılmıştır; ancak hangi komutların zorun
 üreteceği bu registry dokümanında kesinleştirilmemiştir.
 
 Özellikle aşağıdaki işlemler gelecekte response kullanılabilecek adaylardır:
-\begin{itemize}[nosep]
+\begin{itemize}
     \item Parameter GET/SET,
     \item state veya mode değişimi,
     \item kalibrasyon başlatma / kaydetme,
@@ -1124,7 +1199,7 @@ correlation yalnızca Ping ID üzerinden yapılır.
 
 Geçerli ve kendisine yöneltilmiş bir PING alan her DEOS node'u aşağıdaki davranışı uygular:
 
-\begin{enumerate}[nosep]
+\begin{enumerate}
     \item PING mesajının Source Node ve Ping ID alanlarını okur.
     \item Yeni bir PONG mesajı oluşturur.
     \item PONG Source alanını kendi Node ID'si yapar.
@@ -1225,6 +1300,20 @@ Command       = STATUS
 \end{verbatim}
 
 Gateway kullanılması bu mantıksal kimliği değiştirmez.
+
+\subsection{Aydınlatma Komutu (Ön Farları Açma)}
+
+\begin{verbatim}
+Source        = DEOS_NODE_GROUND_CONTROL
+Destination   = DEOS_NODE_LIGHTING
+Priority      = DEOS_PRIO_CONTROL
+Message Class = DEOS_CLASS_COMMAND
+Service       = DEOS_SERVICE_LIGHTING
+Command       = DEOS_CMD_LIGHTING_SET_STATE
+Length        = 0x02
+Payload       = [0x01, 0x01] (Light ID: HEADLIGHT, State: ON)
+CAN-ID        = 0x08481402
+\end{verbatim}
 
 
 \subsection{Ground Control'dan Textual Node'a PING}

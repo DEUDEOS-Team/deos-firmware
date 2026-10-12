@@ -155,7 +155,7 @@ SRC
 \]
 
 Burada:
-\begin{itemize}[nosep]
+\begin{itemize}
     \item \(P\): Priority,
     \item \(C\): Message Class,
     \item \(S\): Service ID,
@@ -249,6 +249,7 @@ Node ID & Symbol & Fiziksel Cihaz & Görev \\
 \hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik sistemi kontrolü \\
 \hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon sistemi kontrolü \\
 \hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Fren sistemi kontrolü \\
+\hex{14} & \code{DEOS\_NODE\_LIGHTING} & STM32 / Aydınlatma ECU & Aydınlatma ve sinyalizasyon kontrolü \\
 \hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & DALY BMS \#1 & Ana batarya BMS \\
 \hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & DALY BMS \#2 & Yardımcı batarya BMS \\
 \hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway & Classic CAN--CAN-FD çevirici \\
@@ -285,6 +286,7 @@ typedef enum
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
     DEOS_NODE_BRAKE          = 0x12,
+    DEOS_NODE_LIGHTING       = 0x14,
 
     DEOS_NODE_BMS_MAIN       = 0x20,
     DEOS_NODE_BMS_AUX        = 0x21,
@@ -393,7 +395,9 @@ Service ID & Symbol & Amaç \\
 \hex{04} & \code{DEOS\_SERVICE\_BMS} & Batarya ve BMS verileri \\
 \hex{05} & \code{DEOS\_SERVICE\_CALIBRATION} & Kalibrasyon işlemleri \\
 \hex{06} & \code{DEOS\_SERVICE\_DIAGNOSTIC} & Fault / sağlık / diagnostik \\
-\hex{07}--\hex{3F} & Reserved & Yeni servisler için ayrılmış alan \\
+\hex{07} & \code{DEOS\_SERVICE\_SENSORS} & Sensör ve IMU veri servisi \\
+\hex{08} & \code{DEOS\_SERVICE\_LIGHTING} & Aydınlatma ve sinyalizasyon sistemi \\
+\hex{09}--\hex{3F} & Reserved & Yeni servisler için ayrılmış alan \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -407,7 +411,9 @@ typedef enum
     DEOS_SERVICE_BRAKE       = 0x03,
     DEOS_SERVICE_BMS         = 0x04,
     DEOS_SERVICE_CALIBRATION = 0x05,
-    DEOS_SERVICE_DIAGNOSTIC  = 0x06
+    DEOS_SERVICE_DIAGNOSTIC  = 0x06,
+    DEOS_SERVICE_SENSORS     = 0x07,
+    DEOS_SERVICE_LIGHTING    = 0x08
 } deos_service_id_t;
 \end{lstlisting}
 
@@ -422,20 +428,21 @@ Aşağıdaki tablo temel service handler sahipliğini gösterir. Her adreslenebi
 ayrıca bu ICD'de tanımlanan ortak SYSTEM/NETWORK PING--PONG davranışını desteklemek zorundadır.
 
 \begin{center}
-\begin{tabularx}{\textwidth}{l *{7}{>{\centering\arraybackslash}X}}
+\begin{tabularx}{\textwidth}{l *{8}{>{\centering\arraybackslash}X}}
 \toprule
-Node & SYS & TRAC & STEER & BRAKE & BMS & CAL & DIAG \\
+Node & SYS & TRAC & STEER & BRAKE & BMS & CAL & DIAG & LIGHT \\
 \midrule
-TEXTUAL & X & -- & -- & -- & -- & -- & X \\
-GROUND\_CONTROL & X & -- & -- & -- & -- & -- & X \\
-MAIN\_STM32 & X & X & X & X & X & X & X \\
-MICRO\_ROS & X & -- & -- & -- & -- & -- & X \\
-TRACTION & X & X & -- & -- & -- & X & X \\
-STEERING & X & -- & X & -- & -- & X & X \\
-BRAKE & X & -- & -- & X & -- & X & X \\
-BMS\_MAIN & X & -- & -- & -- & X & -- & X \\
-BMS\_AUX & X & -- & -- & -- & X & -- & X \\
-BMS\_GATEWAY & X & -- & -- & -- & X & -- & X \\
+TEXTUAL & X & -- & -- & -- & -- & -- & X & -- \\
+GROUND\_CONTROL & X & -- & -- & -- & -- & -- & X & -- \\
+MAIN\_STM32 & X & X & X & X & X & X & X & X \\
+MICRO\_ROS & X & -- & -- & -- & -- & -- & X & -- \\
+TRACTION & X & X & -- & -- & -- & X & X & -- \\
+STEERING & X & -- & X & -- & -- & X & X & -- \\
+BRAKE & X & -- & -- & X & -- & X & X & -- \\
+LIGHTING & X & -- & -- & -- & -- & -- & X & X \\
+BMS\_MAIN & X & -- & -- & -- & X & -- & X & -- \\
+BMS\_AUX & X & -- & -- & -- & X & -- & X & -- \\
+BMS\_GATEWAY & X & -- & -- & -- & X & -- & X & -- \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -506,7 +513,7 @@ RESPONSE Message Class protokolde ayrılmıştır; ancak hangi komutların zorun
 üreteceği bu registry dokümanında kesinleştirilmemiştir.
 
 Özellikle aşağıdaki işlemler gelecekte response kullanılabilecek adaylardır:
-\begin{itemize}[nosep]
+\begin{itemize}
     \item Parameter GET/SET,
     \item state veya mode değişimi,
     \item kalibrasyon başlatma / kaydetme,

@@ -1,0 +1,312 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath}
+
+\geometry{
+    a4paper,
+    top=1.8cm,
+    bottom=1.8cm,
+    left=1.8cm,
+    right=1.8cm
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.18}
+
+\lstdefinestyle{cstyle}{
+    language={[ANSI]C},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries,
+    commentstyle=\itshape,
+    numbers=left,
+    numberstyle=\tiny,
+    numbersep=7pt,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4
+}
+
+\newcommand{\hex}[1]{\texttt{0x#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\textbf{DEOS Lighting \& Signaling Subsystem ICD}\\
+\large v1.0 (Aydınlatma ve Sinyalizasyon Arayüz Kontrol Dokümanı)}
+\author{DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{12 Ekim 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Doküman tipi:} & Subsystem Interface Control Document (ICD) \\
+\textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
+\textbf{Fonksiyonel Servis:} & \code{DEOS\_SERVICE\_LIGHTING} (\hex{08}) \\
+\textbf{Hedef Düğüm (Node):} & \code{DEOS\_NODE\_LIGHTING} (\hex{14}) / \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03}) \\
+\textbf{Taşıma Altyapısı:} & CAN-FD ana omurga \\
+\end{tabular}
+\end{center}
+
+\section{Aydınlatma ve Sinyalizasyon Alt Sistemi}
+
+Bu doküman, DEOS otonom aracında bulunan aydınlatma ve sinyalizasyon elemanlarının (ön farlar, fren lambası, sol sinyal, sağ sinyal, dörtlü flaşörler) CAN-FD protokolü üzerinden kontrol edilmesini, durumlarının sorgulanmasını ve telemetri olarak yayınlanmasını tanımlar.
+
+Aydınlatma servisi protokol seviyesinde \code{DEOS\_SERVICE\_LIGHTING} (\hex{08}) olarak tanımlanır. Bu servis, bağımsız bir gövde kontrol düğümü olan \code{DEOS\_NODE\_LIGHTING} (\hex{14}) veya merkezi kontrolcü olan \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03}) üzerinde barındırılabilir.
+
+\section{Far ve Lamba Adresleme Tablosu (Light Address Registry)}
+
+Her bir aydınlatma elemanına CAN-FD frame payload'ında kullanılmak üzere sistem genelinde tekil bir 8-bit lamba adresi (\code{Light ID}) atanmıştır:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l l X}
+\toprule
+\textbf{Far Adresi} & \textbf{Sembolik İsim} & \textbf{Eleman} & \textbf{Açıklama} \\
+\midrule
+\hex{00} & \code{DEOS\_LIGHT\_NONE} & Tanımsız / Reserved & Geçersiz lamba adresi. \\
+\hex{01} & \code{DEOS\_LIGHT\_HEADLIGHT} & Ön Farlar & Gece sürüşü ve aydınlatma lambaları. \\
+\hex{02} & \code{DEOS\_LIGHT\_BRAKE} & Fren Lambası & Arka kırmızı fren/stop ikaz lambası. \\
+\hex{03} & \code{DEOS\_LIGHT\_TURN\_LEFT} & Sol Sinyal & Sol dönüş ikaz lambası. \\
+\hex{04} & \code{DEOS\_LIGHT\_TURN\_RIGHT} & Sağ Sinyal & Sağ dönüş ikaz lambası. \\
+\hex{05} & \code{DEOS\_LIGHT\_HAZARD} & Dörtlü Flaşör & Sol ve sağ sinyallerin eşzamanlı flaşör modu. \\
+\hex{FF} & \code{DEOS\_LIGHT\_ALL} & Tüm Işıklar & Araçtaki tüm aydınlatma grubunu toplu kontrol. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Far Durum Değerleri (Light State Registry)}
+
+Bir lambaya açma veya kapama komutu gönderilirken ya da lambanın anlık çalışma durumu raporlanırken 8-bit durum kodu (\code{State}) kullanılır:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l l X}
+\toprule
+\textbf{Durum Kodu} & \textbf{Sembolik İsim} & \textbf{Durum} & \textbf{Davranış} \\
+\midrule
+\hex{00} & \code{DEOS\_LIGHT\_STATE\_OFF} & Kapalı & Lamba sönük, akım kesik. \\
+\hex{01} & \code{DEOS\_LIGHT\_STATE\_ON} & Açık & Lamba sürekli aktif, \%100 çıkış. \\
+\hex{02} & \code{DEOS\_LIGHT\_STATE\_BLINK} & Flaşör (Sinyal) & Standart periyodik yanıp sönme (örn. 1 Hz, \%50 doluluk). \\
+\hex{03} & \code{DEOS\_LIGHT\_STATE\_FAST\_BLINK} & Hızlı Flaşör & Acil durum / arıza uyarısı (örn. 4 Hz hızlı yanıp sönme). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Komut Namespace (Command Registry)}
+
+\code{DEOS\_SERVICE\_LIGHTING} (\hex{08}) servisi altında geçerli komutlar:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c X}
+\toprule
+\textbf{Komut ID} & \textbf{Sembolik İsim} & \textbf{Sınıf} & \textbf{Fonksiyonel Görev} \\
+\midrule
+\hex{01} & \code{DEOS\_CMD\_LIGHTING\_SET\_STATE} & COMMAND (\hex{1}) & Belirtilen farın durumunu (Aç/Kapat/Flaşör) ayarlar. \\
+\hex{02} & \code{DEOS\_CMD\_LIGHTING\_TURN\_ON} & COMMAND (\hex{1}) & Belirtilen farı doğrudan açar (State = \hex{01}). \\
+\hex{03} & \code{DEOS\_CMD\_LIGHTING\_TURN\_OFF} & COMMAND (\hex{1}) & Belirtilen farı doğrudan kapatır (State = \hex{00}). \\
+\hex{04} & \code{DEOS\_CMD\_LIGHTING\_SET\_ALL} & COMMAND (\hex{1}) & Tüm farları tek bir bitmask baytı ile toplu ayarlar. \\
+\hex{05} & \code{DEOS\_CMD\_LIGHTING\_GET\_STATUS} & REQUEST (\hex{4}) & Tüm lambaların anlık durumunu talep eder. \\
+\hex{06} & \code{DEOS\_CMD\_LIGHTING\_STATUS} & STATUS (\hex{2}) / RESPONSE (\hex{5}) & Lamba durum telemetrisini taşır. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Payload Formatları}
+
+Ortak DEOS v1.1 protokol başlığı (Header: Version [1B], Sequence [1B], Command [1B], Length [1B]) sonrasında yer alan Command Payload yapıları aşağıda tanımlanmıştır.
+
+\subsection{Far Aç/Kapat Komutu (DEOS\_CMD\_LIGHTING\_SET\_STATE - 0x01)}
+
+En temel ve esnek lamba kontrol komutudur. Hangi farın açılacağı veya kapatılacağı bu komut ile iletilir:
+
+\begin{center}
+\begin{tabular}{c c c l}
+\toprule
+\textbf{Offset} & \textbf{Boyut} & \textbf{Tip} & \textbf{Alan Tanımı} \\
+\midrule
+0 & 1 byte & \code{uint8\_t} & \textbf{Light ID}: Hedef far adresi (\hex{01}: Ön Far, \hex{02}: Fren, \hex{03}: Sol, \hex{04}: Sağ, \hex{FF}: Tümü) \\
+1 & 1 byte & \code{uint8\_t} & \textbf{State}: Hedef durum (\hex{00}: Kapalı, \hex{01}: Açık, \hex{02}: Flaşör) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Toplam Payload Uzunluğu (Length):} 2 byte (\hex{02}).
+
+\subsection{Doğrudan Açma ve Kapatma Komutları (0x02 ve 0x03)}
+
+Tek baytlık optimize kontrol komutlarıdır:
+\begin{itemize}
+    \item \code{DEOS\_CMD\_LIGHTING\_TURN\_ON} (\hex{02}): Byte 0 hedef \code{Light ID} taşır. (Length = \hex{01}).
+    \item \code{DEOS\_CMD\_LIGHTING\_TURN\_OFF} (\hex{03}): Byte 0 hedef \code{Light ID} taşır. (Length = \hex{01}).
+\end{itemize}
+
+\subsection{Toplu Kontrol Bitmask Komutu (DEOS\_CMD\_LIGHTING\_SET\_ALL - 0x04)}
+
+Tek bir CAN-FD mesajında tüm lambaların açık/kapalı durumunu eşzamanlı değiştirmek için kullanılır:
+
+\begin{center}
+\begin{tabular}{c c c l}
+\toprule
+\textbf{Offset} & \textbf{Boyut} & \textbf{Tip} & \textbf{Bit Maskesi Tanımı} \\
+\midrule
+0 & 1 byte & \code{uint8\_t} & Bit 0: Ön Far (1: Açık, 0: Kapalı) \\
+  &        &                & Bit 1: Fren Lambası (1: Açık, 0: Kapalı) \\
+  &        &                & Bit 2: Sol Sinyal (1: Açık, 0: Kapalı) \\
+  &        &                & Bit 3: Sağ Sinyal (1: Açık, 0: Kapalı) \\
+  &        &                & Bit 4..7: Reserved (0 olmalıdır) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Toplam Payload Uzunluğu (Length):} 1 byte (\hex{01}).
+
+\subsection{Aydınlatma Durum Telemetrisi (DEOS\_CMD\_LIGHTING\_STATUS - 0x06)}
+
+Periyodik olarak (STATUS sınıfı) veya sorguya yanıt olarak (RESPONSE sınıfı) yayınlanan telemetri paketidir:
+
+\begin{center}
+\begin{tabular}{c c c l}
+\toprule
+\textbf{Offset} & \textbf{Boyut} & \textbf{Tip} & \textbf{Alan Tanımı} \\
+\midrule
+0 & 1 byte & \code{uint8\_t} & \textbf{Headlight State}: Ön far durumu (0: Kapalı, 1: Açık) \\
+1 & 1 byte & \code{uint8\_t} & \textbf{Brake Light State}: Fren lambası durumu (0: Kapalı, 1: Açık) \\
+2 & 1 byte & \code{uint8\_t} & \textbf{Left Turn State}: Sol sinyal durumu (0: Kapalı, 1: Açık, 2: Flaşör) \\
+3 & 1 byte & \code{uint8\_t} & \textbf{Right Turn State}: Sağ sinyal durumu (0: Kapalı, 1: Açık, 2: Flaşör) \\
+4 & 1 byte & \code{uint8\_t} & \textbf{Fault Flags}: Arıza baytları (Bit 0: Açık devre, Bit 1: Kısa devre/Aşırı akım) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Toplam Payload Uzunluğu (Length):} 5 byte (\hex{05}).
+
+\section{CAN-FD Frame ve 29-Bit Identifier Yapısı}
+
+DEOS mimarisinde 29-bit Extended Identifier yapısı şöyledir:
+\[
+\text{CAN\_ID} = (P \ll 26) \;|\; (C \ll 22) \;|\; (S \ll 16) \;|\; (D \ll 8) \;|\; SRC
+\]
+
+Aydınlatma komutları için varsayılan alan değerleri:
+\begin{itemize}
+    \item \textbf{Priority (P):} \code{DEOS\_PRIO\_CONTROL} = 2 (\code{010}$_2$)
+    \item \textbf{Message Class (C):} \code{DEOS\_CLASS\_COMMAND} = 1 (\code{0001}$_2$)
+    \item \textbf{Service (S):} \code{DEOS\_SERVICE\_LIGHTING} = 8 (\hex{08} = \code{001000}$_2$)
+    \item \textbf{Destination (D):} \code{DEOS\_NODE\_LIGHTING} (\hex{14}) veya \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03})
+    \item \textbf{Source (SRC):} Komutu gönderen düğüm (\code{TEXTUAL}=\hex{01}, \code{GROUND\_CONTROL}=\hex{02}, \code{MICRO\_ROS}=\hex{04})
+\end{itemize}
+
+\subsection{Somut Örnek Frame'ler}
+
+\subsubsection{Örnek 1: Ön Farları Açma Komutu (Operatörden Araca)}
+\begin{itemize}
+    \item \textbf{Kaynak:} \code{DEOS\_NODE\_GROUND\_CONTROL} (\hex{02})
+    \item \textbf{Hedef:} \code{DEOS\_NODE\_LIGHTING} (\hex{14})
+    \item \textbf{CAN ID:} $(2 \ll 26) \;|\; (1 \ll 22) \;|\; (8 \ll 16) \;|\; (\hex{14} \ll 8) \;|\; \hex{02} = \mathbf{\hex{08481402}}$
+    \item \textbf{Data Field (CAN-FD DLC = 8):}
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Byte 0} & \textbf{Byte 1} & \textbf{Byte 2} & \textbf{Byte 3} & \textbf{Byte 4} & \textbf{Byte 5} & \textbf{Byte 6} & \textbf{Byte 7} \\
+Version & Sequence & Command & Length & Light ID & State & Padding & Padding \\
+\hline
+\hex{11} & \hex{01} & \hex{01} & \hex{02} & \textbf{\hex{01}} & \textbf{\hex{01}} & \hex{00} & \hex{00} \\
+\hline
+\end{tabular}
+\end{center}
+\textit{Açıklama: Ön farlar (\hex{01}) AÇIK (\hex{01}) konumuna getirildi.}
+
+\subsubsection{Örnek 2: Fren Lambasını Yakma Komutu}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Byte 0} & \textbf{Byte 1} & \textbf{Byte 2} & \textbf{Byte 3} & \textbf{Byte 4} & \textbf{Byte 5} & \textbf{Byte 6} & \textbf{Byte 7} \\
+Version & Sequence & Command & Length & Light ID & State & Padding & Padding \\
+\hline
+\hex{11} & \hex{02} & \hex{01} & \hex{02} & \textbf{\hex{02}} & \textbf{\hex{01}} & \hex{00} & \hex{00} \\
+\hline
+\end{tabular}
+\end{center}
+\textit{Açıklama: Fren lambası (\hex{02}) AÇIK (\hex{01}) konumuna getirildi.}
+
+\subsubsection{Örnek 3: Sol Sinyali Kapatma Komutu}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Byte 0} & \textbf{Byte 1} & \textbf{Byte 2} & \textbf{Byte 3} & \textbf{Byte 4} & \textbf{Byte 5} & \textbf{Byte 6} & \textbf{Byte 7} \\
+Version & Sequence & Command & Length & Light ID & State & Padding & Padding \\
+\hline
+\hex{11} & \hex{03} & \hex{01} & \hex{02} & \textbf{\hex{03}} & \textbf{\hex{00}} & \hex{00} & \hex{00} \\
+\hline
+\end{tabular}
+\end{center}
+\textit{Açıklama: Sol sinyal (\hex{03}) KAPALI (\hex{00}) konumuna getirildi.}
+
+\subsubsection{Örnek 4: Sağ Sinyali Flaşör Modunda Açma Komutu}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Byte 0} & \textbf{Byte 1} & \textbf{Byte 2} & \textbf{Byte 3} & \textbf{Byte 4} & \textbf{Byte 5} & \textbf{Byte 6} & \textbf{Byte 7} \\
+Version & Sequence & Command & Length & Light ID & State & Padding & Padding \\
+\hline
+\hex{11} & \hex{04} & \hex{01} & \hex{02} & \textbf{\hex{04}} & \textbf{\hex{02}} & \hex{00} & \hex{00} \\
+\hline
+\end{tabular}
+\end{center}
+\textit{Açıklama: Sağ sinyal (\hex{04}) FLAŞÖR (\hex{02}) konumuna getirildi.}
+
+\section{Çapraz Sistem Entegrasyonu ve Emniyet Kuralları}
+
+Aydınlatma alt sistemi bağımsız komutların yanı sıra araç durumuna (State) ve diğer ECU'lara göre otomatik davranışlar sergiler:
+\begin{enumerate}
+    \item \textbf{Fren Sistemi Entegrasyonu:} Fren alt sistemi (\code{DEOS\_NODE\_BRAKE} - \hex{12}) fren uyguladığında, ağ gecikmesi olmaksızın donanımsal veya CAN STATUS dinlemesi ile fren lambası otomatik olarak açılır.
+    \item \textbf{E-STOP ve Acil Durum (SAFE State):} Araç \code{DEOS\_STATE\_SAFE} moduna geçtiğinde fren lambası tam aktif kalır; sol ve sağ sinyaller hızlı dörtlü flaşör (Hazard) moduna geçer.
+    \item \textbf{Standby (Park) Modu:} Araç \code{DEOS\_STATE\_STANDBY} durumundayken dörtlüler yavaş periyotla yanıp söner; fren lambası sönük tutulur.
+\end{enumerate}
+
+\section{C/C++ Protokol Tanımları}
+
+\begin{lstlisting}[style=cstyle]
+/* Far / Lamba Adres Tanimlari */
+typedef enum {
+    DEOS_LIGHT_NONE       = 0x00,
+    DEOS_LIGHT_HEADLIGHT  = 0x01, /* On Farlar (Headlights) */
+    DEOS_LIGHT_BRAKE      = 0x02, /* Fren Lambasi (Brake Light) */
+    DEOS_LIGHT_TURN_LEFT  = 0x03, /* Sol Sinyal (Left Turn Signal) */
+    DEOS_LIGHT_TURN_RIGHT = 0x04, /* Sag Sinyal (Right Turn Signal) */
+    DEOS_LIGHT_HAZARD     = 0x05, /* Dortlu Flasor (Hazard Lights) */
+    DEOS_LIGHT_ALL        = 0xFF  /* Tum Lamba Grubu (All Lights) */
+} deos_light_id_t;
+
+/* Far Durum Kodlari */
+typedef enum {
+    DEOS_LIGHT_STATE_OFF        = 0x00, /* Kapali (OFF) */
+    DEOS_LIGHT_STATE_ON         = 0x01, /* Acik (ON) */
+    DEOS_LIGHT_STATE_BLINK      = 0x02, /* Flasor (Blink 1 Hz) */
+    DEOS_LIGHT_STATE_FAST_BLINK = 0x03  /* Hizli Flasor (Fast Blink 4 Hz) */
+} deos_light_state_t;
+
+/* Aydinlatma Servisi Komutlari */
+typedef enum {
+    DEOS_CMD_LIGHTING_SET_STATE  = 0x01, /* Far Ac/Kapat Durum Belirleme */
+    DEOS_CMD_LIGHTING_TURN_ON    = 0x02, /* Dogrudan Ac */
+    DEOS_CMD_LIGHTING_TURN_OFF   = 0x03, /* Dogrudan Kapat */
+    DEOS_CMD_LIGHTING_SET_ALL    = 0x04, /* Toplu Bitmask Kontrolu */
+    DEOS_CMD_LIGHTING_GET_STATUS = 0x05, /* Durum Sorgusu (REQUEST) */
+    DEOS_CMD_LIGHTING_STATUS     = 0x06  /* Durum Telemetrisi (STATUS) */
+} deos_lighting_command_t;
+\end{lstlisting}
+
+\end{document}
