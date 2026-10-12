@@ -98,7 +98,7 @@ Aşağıdaki komutlar Traction ECU'nun ağdan anlık olarak alması gereken komu
 \toprule
 \textbf{Değişken Adı} & \textbf{Sınıf \& Servis} & \textbf{Komut ID} & \textbf{Ölçek \& Birim} & \textbf{Fonksiyonel Görev} \\
 \midrule
-\code{target\_speed} & COMMAND (0x1) TRACTION (0x01) & 0x01 (SET\_SPEED) & 0.01 m/s & micro-ROS veya Textual referans hız komutu. \\
+\code{target\_speed} & COMMAND (0x1) TRACTION (0x01) & 0x01 (SET\_SPEED) & 0.01 m/s & ROS 2 Bridge veya Textual referans hız komutu. \\
 \code{target\_accel} & COMMAND (0x1) TRACTION (0x01) & 0x01 (Genişletilmiş) & 0.01 m/s² & İleri besleme girdisi; dişli boşluğu (backlash) darbe önleyici. \\
 \code{target\_gear} & COMMAND (0x1) TRACTION (0x01) & 0x04 (SET\_GEAR) & Enum (0:N, 1:D, 2:R, 3:P) & Vites seçimi. Hız sıfırlanmadan ters yöne geçiş kilitlenir. \\
 \code{dynamic\_torque\_limit} & COMMAND (0x1) TRACTION (0x01) & 0x05 (SET\_TORQUE) & 0.01 \% & Sürüş moduna göre anlık motor tork tavanı sınırlandırması. \\

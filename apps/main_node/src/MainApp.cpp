@@ -57,8 +57,8 @@ extern "C" {
     deos_transport_t c_routing_policy(deos_node_id_t destination) {
         if (destination == DEOS_NODE_GROUND_CONTROL) {
             return DEOS_TRANSPORT_UART_LORA;
-        } else if (destination == DEOS_NODE_MICRO_ROS) {
-            return DEOS_TRANSPORT_ETH_UROS;
+        } else if (destination == DEOS_NODE_ROS_BRIDGE) {
+            return DEOS_TRANSPORT_ETH_ROS_BRIDGE;
         } else if (destination == DEOS_NODE_DIAG_TOOL) {
             return DEOS_TRANSPORT_ETH_TEXTUAL;
         }

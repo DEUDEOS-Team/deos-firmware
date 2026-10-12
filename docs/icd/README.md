@@ -54,7 +54,7 @@ Yeni geliştiricilerin ve sistem entegratörlerinin şartnameyi aşağıdaki sı
 | **`DOC-ICD-NET-003`** | [ICD_Network_Management.pdf](ICD_Network_Management.pdf) | SYSTEM servisi (`0x00`), PING/PONG mesajlaşması, canlılık takibi (Heartbeat) ve düğüm tanıma. |
 | **`DOC-ICD-DIAG-004`** | [ICD_Fault_Management.pdf](ICD_Fault_Management.pdf) | DIAGNOSTIC servisi (`0x07`), DTC hata kodlama yapısı, arıza seviyeleri (`WARNING`, `CRITICAL`, `FATAL`). |
 | **`DOC-ICD-TRP-CANFD-005`** | [ICD_CANFD_Transport.pdf](ICD_CANFD_Transport.pdf) | CAN-FD fiziksel katmanı, 29-bit Extended ID bit yerleşimi, baud rate kuralları, DLC padding kuralları. |
-| **`DOC-ICD-TRP-TCP-006`** | [ICD_Ethernet_TCP.pdf](ICD_Ethernet_TCP.pdf) | Ethernet/TCP akış çerçeveleme başlığı (`0xDE05`), Python referans istemci kodu ve telemetri aktarımı. |
+| **`DOC-ICD-TRP-ETH-006`** | [ICD_Ethernet_TCP.pdf](ICD_Ethernet_TCP.pdf) | Ethernet (TCP \& UDP) Taşıma Katmanı: Textual UI (TCP Port 5000) ve ROS 2 Bridge (UDP Port 5001) çerçeveleme, dinamik istemci keşfi ve paket anatomisi. |
 | **`DOC-ICD-TRP-LORA-007`** | [ICD_LoRa_Telemetry.pdf](ICD_LoRa_Telemetry.pdf) | Yer kontrol telemetrisi için LoRa/UART senkronizasyon çerçevesi (`0xAA55`), hava süresi optimizasyonu, ACK/Retry protokolü. |
 | **`DOC-ICD-NODE-TRAC-008`** | [ICD_Traction.pdf](ICD_Traction.pdf) | Çekiş kontrol düğümü (`0x10`) ve servisi (`0x01`): Tork talebi, hız geri bildirimi, motor sürücü telemetrisi. |
 | **`DOC-ICD-NODE-STR-009`** | [ICD_Steering.pdf](ICD_Steering.pdf) | Direksiyon kontrol düğümü (`0x11`) ve servisi (`0x02`): Hedef açı, mevcut açı, tork sınırlama, kalibrasyon. |
@@ -66,22 +66,25 @@ Yeni geliştiricilerin ve sistem entegratörlerinin şartnameyi aşağıdaki sı
 
 ## 3. Düğüm (Node) ve Servis (Service) Haritası
 
-DEOS mimarisinde düğümler fiziksel/mantıksal adresleri temsil ederken; servisler yürütülen fonksiyonel yetenekleri ifade eder. Bir düğüm birden fazla servise ev sahipliği yapabilir.
+DEOS mimarisinde düğümler fiziksel/mantıksal adresleri temsil ederken; servisler yürütülen fonksiyonel yetenekleri ifade eder. Bir fiziksel mikrodenetleyici birden fazla mantıksal (hosted/virtual) düğüme ev sahipliği yapabilir (`deos_register_local_node`).
 
-| Düğüm Adı | Node ID | Barındırdığı Birincil Servisler | Açıklama |
-|---|---|---|---|
-| `DEOS_NODE_BROADCAST` | `0x00` | Tüm Servisler | Yayın (Tüm düğümlere gönderim) |
-| `DEOS_NODE_DIAG_TOOL` | `0x01` | SYSTEM (`0x00`), DIAGNOSTIC (`0x07`) | Harici Teşhis / Test Aracı |
-| `DEOS_NODE_GROUND_CONTROL` | `0x02` | SYSTEM (`0x00`), Telemetri | LoRa üzerinden Yer Kontrol İstasyonu |
-| `DEOS_NODE_MAIN_STM32` | `0x03` | SYSTEM (`0x00`), LIGHTING (`0x08`), Router | Araç Ana Kontrolcüsü & Merkezi Ağ Yönlendirici |
-| `DEOS_NODE_TEXTUAL` | `0x04` | SYSTEM (`0x00`), CONFIG (`0x06`) | Seri Port / CLI Metin Arayüzü |
-| `DEOS_NODE_MICROROS` | `0x05` | SYSTEM (`0x00`), Telemetri Köprüsü | micro-ROS Köprü Düğümü |
-| `DEOS_NODE_TRACTION` | `0x10` | TRACTION (`0x01`), SYSTEM (`0x00`) | Çekiş / İnvertör Düğümü |
-| `DEOS_NODE_STEERING` | `0x11` | STEERING (`0x02`), SYSTEM (`0x00`) | Direksiyon Motor Kontrolcüsü |
-| `DEOS_NODE_BRAKE` | `0x12` | BRAKE (`0x03`), SYSTEM (`0x00`) | Mekanik / Hidrolik Fren Kontrolcüsü |
-| `DEOS_NODE_BMS_MAIN` | `0x20` | BMS (`0x04`), SYSTEM (`0x00`) | Ana Çekiş Bataryası BMS |
-| `DEOS_NODE_BMS_AUX` | `0x21` | BMS (`0x04`), SYSTEM (`0x00`) | 12V / 24V Düşük Gerilim Bataryası BMS |
-| `DEOS_NODE_GATEWAY` | `0x30` | SYSTEM (`0x00`), Ethernet/CAN Köprüsü | Ağ Geçidi (Gateway) |
+| Düğüm Adı | Node ID | Düğüm Türü | Barındırdığı Birincil Servisler | Açıklama |
+|---|---|---|---|---|
+| `DEOS_NODE_INVALID` | `0x00` | - | - | Geçersiz / Tanımsız Düğüm |
+| `DEOS_NODE_TEXTUAL` | `0x01` | Sanal / Arayüz | SYSTEM (`0x00`), CONFIG (`0x06`) | Ethernet TCP (Port 5000) Konsol / CLI Arayüzü |
+| `DEOS_NODE_GROUND_CONTROL` | `0x02` | Sanal / Uzak | SYSTEM (`0x00`), Telemetri | LoRa üzerinden Yer Kontrol İstasyonu |
+| `DEOS_NODE_MAIN_STM32` | `0x03` | Fiziksel Cihaz | SYSTEM (`0x00`), LIGHTING (`0x08`), Router | Araç Ana Kontrolcüsü, Ağ Yönlendirici \& Aydınlatma |
+| `DEOS_NODE_ROS_BRIDGE` | `0x04` | Sanal / Köprü | SYSTEM (`0x00`), Telemetri \& Otonom | Ethernet UDP (Port 5001) ROS 2 Köprüsü (`deos_ros_bridge`) |
+| `DEOS_NODE_TRACTION` | `0x10` | Fiziksel ECU | TRACTION (`0x01`), SYSTEM (`0x00`) | Çekiş / İnvertör Düğümü |
+| `DEOS_NODE_STEERING` | `0x11` | Fiziksel ECU | STEERING (`0x02`), SYSTEM (`0x00`) | Direksiyon Motor Kontrolcüsü |
+| `DEOS_NODE_BRAKE` | `0x12` | Fiziksel ECU | BRAKE (`0x03`), SYSTEM (`0x00`) | Mekanik / Hidrolik Fren Kontrolcüsü |
+| `DEOS_NODE_IMU` | `0x13` | Sanal / Hosted | SYSTEM (`0x00`), Sensörler (`0x07`) | STM32 Ana Kartı üzerinde koşan 6-Eksen IMU Düğümü |
+| `DEOS_NODE_BMS_MAIN` | `0x20` | Sanal / Hosted | BMS (`0x04`), SYSTEM (`0x00`) | BMS Gateway üzerinde koşan Ana Batarya Daly Proxy Düğümü |
+| `DEOS_NODE_BMS_AUX` | `0x21` | Sanal / Hosted | BMS (`0x04`), SYSTEM (`0x00`) | BMS Gateway üzerinde koşan Yardımcı Batarya Daly Proxy Düğümü |
+| `DEOS_NODE_BMS_GATEWAY` | `0x30` | Fiziksel Cihaz | SYSTEM (`0x00`), Classic CAN Köprüsü | Classic CAN -- CAN-FD Ağ Geçidi (Gateway) |
+| `DEOS_NODE_DIAG_TOOL` | `0xF0` | Sanal / Test | SYSTEM (`0x00`), DIAGNOSTIC (`0x07`) | Harici Teşhis / Test Cihazı (Ethernet) |
+| `DEOS_NODE_CAN_BROADCAST` | `0xFE` | Mantıksal Yayın | Tüm Servisler | Yalnızca CAN-FD Hattı Yayını (Heartbeat vb.) |
+| `DEOS_NODE_GLOBAL_BROADCAST` | `0xFF` | Mantıksal Yayın | Tüm Servisler | Tüm Fiziksel Hatlara Genel Yayın (E-STOP, State) |
 
 > **Önemli Not (Aydınlatma Servisi):** Aydınlatma bağımsız bir mikrodenetleyici düğümü değildir. `DEOS_NODE_MAIN_STM32` (`0x03`) düğümüne gönderilen `DEOS_SERVICE_LIGHTING` (`0x08`) servis mesajları ile ana beyin üzerindeki transistör/röle sürücüleri tetiklenir.
 

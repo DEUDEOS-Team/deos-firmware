@@ -8,7 +8,7 @@ Proje, donanım bağımsız (hardware-agnostic) bir yapıda geliştirilmiş olup
 
 ## 🚀 Kurulum ve İlk Adımlar
 
-DEOS Firmware, kendi içerisinde bir Zephyr manifestosu (`west.yml`) barındırır. Bu sayede gerekli olan Zephyr çekirdeği ve dış kütüphaneler (örneğin micro-ROS) otomatik olarak indirilir.
+DEOS Firmware, kendi içerisinde bir Zephyr manifestosu (`west.yml`) barındırır. Bu sayede gerekli olan Zephyr çekirdeği ve dış modüller otomatik olarak indirilir.
 
 Projeyi bilgisayarınıza kurmak için standart `git clone` **yerine** aşağıdaki Zephyr komutlarını kullanmanız gerekir:
 
@@ -19,21 +19,11 @@ west init -m https://github.com/emirarkali/deos-firmware.git deos_workspace
 # 2. Çalışma alanına girin
 cd deos_workspace
 
-# 3. Bağımlılıkları, Zephyr çekirdeğini ve kütüphaneleri otomatik indirin
+# 3. Bağımlılıkları, Zephyr çekirdeğini ve modülleri otomatik indirin
 west update
 ```
 
-Bu komutlardan sonra Zephyr ortamınız ve gerekli tüm modüller (micro-ROS dahil) inmiş olacaktır.
-
-### 4. micro-ROS Derleyici Araçlarını Kurun
-
-micro-ROS kütüphanesinin C kodlarının derlenebilmesi için Python sanal ortamınıza (`.venv`) gerekli derleme araçlarını kurmanız zorunludur. Aşağıdaki komutu **Zephyr sanal ortamınız (virtual environment) aktifken** çalıştırın:
-
-```bash
-pip install catkin_pkg lark-parser empy colcon-common-extensions
-```
-
-Bu adımı da tamamladıktan sonra projeniz derlenmeye hazırdır.
+Bu komutlardan sonra Zephyr ortamınız ve gerekli tüm modüller inmiş ve derlenmeye hazır olacaktır.
 
 ---
 

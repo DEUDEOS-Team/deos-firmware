@@ -57,8 +57,8 @@ for tex_file in "${TEX_FILES[@]}"; do
 done
 
 echo "----------------------------------------------------------------------"
-echo "Cleaning up auxiliary build artifacts (*.aux, *.log, *.out, *.toc)..."
-rm -f *.aux *.log *.out *.toc
+echo "Cleaning up auxiliary build artifacts (*.aux, *.log, *.out, *.toc, *.fls, *.fdb_latexmk)..."
+rm -f *.aux *.log *.out *.toc *.fls *.fdb_latexmk *.synctex.gz
 
 echo "======================================================================"
 echo " Compilation Finished."

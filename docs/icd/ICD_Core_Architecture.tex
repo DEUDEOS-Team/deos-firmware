@@ -202,46 +202,59 @@ haberleşme ucudur.
 \toprule
 Node ID & Symbol & Çalıştığı Ortam & Görev \\
 \midrule
-\hex{01} & \code{DEOS\_NODE\_TEXTUAL} & Raspberry Pi / Textual & Operatör arayüzü; config, command, request/response, status ve log sink \\
-\hex{02} & \code{DEOS\_NODE\_GROUND\_CONTROL} & Uzak yer kontrol uygulaması & Yer kontrol haberleşme ucu \\
-\hex{04} & \code{DEOS\_NODE\_MICRO\_ROS} & Raspberry Pi / micro-ROS & ROS arayüzü, telemetry ve control entegrasyonu \\
+\hex{01} & \code{DEOS\_NODE\_TEXTUAL} & Raspberry Pi / Textual & Operatör arayüzü; TCP 5000 soketi üzerinden config, komut, status ve log sink \\
+\hex{02} & \code{DEOS\_NODE\_GROUND\_CONTROL} & Uzak yer kontrol yazılımı & LoRa üzerinden telemetri ve yer istasyonu kontrol ucu \\
+\hex{04} & \code{DEOS\_NODE\_ROS\_BRIDGE} & Gömülü Linux / ROS 2 & Ethernet UDP 5001 portu üzerinden ROS 2 Köprüsü (\code{deos\_ros\_bridge}), otonom sürüş entegrasyonu \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
 Textual Node yalnızca konfigürasyon amacıyla kullanılan bir node değildir. Protokolün izin
 verdiği servislerde komut gönderebilir, cevap alabilir, durum bilgilerini işleyebilir ve
-log mesajlarının doğrudan hedefi olabilir. Benzer şekilde micro-ROS ve Ground Control
+log mesajlarının doğrudan hedefi olabilir. Benzer şekilde ROS 2 Bridge ve Ground Control
 Node'ları da ihtiyaç duydukları servisleri kaynak veya hedef olarak kullanabilir.
 
-\subsection{Physical Node Atamaları}
+\subsection{Physical (Fiziksel) Node Atamaları}
 
 \begin{center}
 \begin{tabularx}{\textwidth}{c l l X}
 \toprule
 Node ID & Symbol & Fiziksel Cihaz & Görev \\
 \midrule
-\hex{03} & \code{DEOS\_NODE\_MAIN\_STM32} & STM32H563ZI & Ana fiziksel kontrol düğümü \\
-\hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik sistemi kontrolü \\
-\hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon sistemi kontrolü \\
-\hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Fren sistemi kontrolü \\
-\hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & DALY BMS \#1 & Ana batarya BMS \\
-\hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & DALY BMS \#2 & Yardımcı batarya BMS \\
-\hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway & Classic CAN--CAN-FD çevirici \\
+\hex{03} & \code{DEOS\_NODE\_MAIN\_STM32} & STM32H563ZI & Araç ana fiziksel kontrol ve ağ yönlendirici (Router) düğümü \\
+\hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik / invertör sistemi kontrolü \\
+\hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon açısı ve motoru kontrolü \\
+\hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Mekanik ve hidrolik frenleme sistemi kontrolü \\
+\hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway Donanımı & Classic CAN (Daly) ile CAN-FD omurgası arası donanımsal köprü \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
-\subsection{Servis ve Özel Node Atamaları}
+\subsection{Hosted / Sanal (Virtual Local) Node Atamaları}
+DEOS protokolünde bir fiziksel mikrodenetleyici birden fazla mantıksal düğüme ev sahipliği yapabilir (\code{deos\_register\_local\_node}).
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l l X}
+\toprule
+Node ID & Symbol & Barındıran Fiziksel Düğüm & Görev ve Açıklama \\
+\midrule
+\hex{13} & \code{DEOS\_NODE\_IMU} & \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03}) & Araç ana kartı üzerindeki 6-eksen ataletsel ölçüm sensörü telemetrisi \\
+\hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & \code{DEOS\_NODE\_BMS\_GATEWAY} (\hex{30}) & Daly BMS \#1 (Ana Yüksek Gerilim Çekiş Bataryası) sanal proxy düğümü \\
+\hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & \code{DEOS\_NODE\_BMS\_GATEWAY} (\hex{30}) & Daly BMS \#2 (12V/24V Yardımcı Düşük Gerilim Bataryası) sanal proxy düğümü \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Servis ve Özel Adres Atamaları}
 
 \begin{center}
 \begin{tabularx}{\textwidth}{c l l X}
 \toprule
 Node ID & Symbol & Tür & Görev \\
 \midrule
-\hex{F0} & \code{DEOS\_NODE\_DIAG\_TOOL} & Servis aracı & Diagnostik ve servis erişimi \\
-\hex{FE} & \code{DEOS\_NODE\_CAN\_BROADCAST} & Mantıksal & Sadece CAN-FD ağındaki düğümlere yayın \\
-\hex{FF} & \code{DEOS\_NODE\_GLOBAL\_BROADCAST} & Mantıksal & CAN, LoRa, Eth dahil tüm ağ arayüzlerine yayın \\
+\hex{F0} & \code{DEOS\_NODE\_DIAG\_TOOL} & Servis aracı & Harici diagnostik ve test cihazı arayüzü \\
+\hex{FE} & \code{DEOS\_NODE\_CAN\_BROADCAST} & Mantıksal Yayın & Sadece donanımsal CAN-FD hattındaki düğümlere yayın (Heartbeat vb.) \\
+\hex{FF} & \code{DEOS\_NODE\_GLOBAL\_BROADCAST} & Mantıksal Yayın & CAN, LoRa, Ethernet dahil tüm ağ arayüzlerine genel yayın (E-STOP, State) \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -256,11 +269,12 @@ typedef enum
     DEOS_NODE_TEXTUAL        = 0x01,
     DEOS_NODE_GROUND_CONTROL = 0x02,
     DEOS_NODE_MAIN_STM32     = 0x03,
-    DEOS_NODE_MICRO_ROS      = 0x04,
+    DEOS_NODE_ROS_BRIDGE     = 0x04,
 
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
     DEOS_NODE_BRAKE          = 0x12,
+    DEOS_NODE_IMU            = 0x13,
 
     DEOS_NODE_BMS_MAIN       = 0x20,
     DEOS_NODE_BMS_AUX        = 0x21,
@@ -369,7 +383,7 @@ Service ID & Symbol & Amaç \\
 \hex{04} & \code{DEOS\_SERVICE\_BMS} & Batarya ve BMS verileri \\
 \hex{05} & \code{DEOS\_SERVICE\_CALIBRATION} & Kalibrasyon işlemleri \\
 \hex{06} & \code{DEOS\_SERVICE\_DIAGNOSTIC} & Fault / sağlık / diagnostik \\
-\hex{07} & \code{DEOS\_SERVICE\_SENSORS} & Sensör ve IMU veri servisi \\
+\hex{07} & \code{DEOS\_SERVICE\_SENSORS} & Sensör verileri \\
 \hex{08} & \code{DEOS\_SERVICE\_LIGHTING} & Aydınlatma ve sinyalizasyon sistemi \\
 \hex{09}--\hex{3F} & Reserved & Yeni servisler için ayrılmış alan \\
 \bottomrule
@@ -683,7 +697,7 @@ DEOS_MODE_...
 DEOS_NODE_TEXTUAL
 DEOS_NODE_GROUND_CONTROL
 DEOS_NODE_MAIN_STM32
-DEOS_NODE_MICRO_ROS
+DEOS_NODE_ROS_BRIDGE
 DEOS_NODE_STEERING
 DEOS_CLASS_CONFIG
 DEOS_SERVICE_STEERING

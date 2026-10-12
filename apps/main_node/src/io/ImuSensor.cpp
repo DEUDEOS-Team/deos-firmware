@@ -27,9 +27,11 @@ static void imu_thread_func(void *p1, void *p2, void *p3) {
         imu_data.gyro_y = 0;
         imu_data.gyro_z = (int16_t)((counter % 200) - 100); /* Swaying gyro -1.0 to 1.0 deg/s */
 
+#define DEOS_NODE_ROS_BRIDGE DEOS_NODE_MICRO_ROS
+
         deos_send_from_node(
             DEOS_NODE_IMU,
-            DEOS_NODE_MICRO_ROS,
+            DEOS_NODE_ROS_BRIDGE,
             DEOS_PRIO_STATUS,
             DEOS_CLASS_STATUS,
             DEOS_SERVICE_SENSORS,
