@@ -6,6 +6,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{tabularx}
 \usepackage{listings}
 \usepackage[hidelinks]{hyperref}
 
@@ -19,6 +20,9 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{4pt}
 
+\newcommand{\hex}[1]{\texttt{0x#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
 \lstset{
     basicstyle=\ttfamily\small,
     frame=single,
@@ -26,14 +30,42 @@
     columns=fullflexible
 }
 
-\title{\textbf{DEOS BMS Service Protocol}\\
-\large CAN-FD ICD Tamamlayıcı Dokümanı}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{}
+\title{\textbf{DEOS BMS Service \& Gateway Protocol ICD}\\
+\large Sürüm 1.1 -- Batarya Yönetim Sistemi}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NODE-BMS-012} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & BMS\_MAIN (\hex{20}), BMS\_AUX (\hex{21}), BMS\_GATEWAY (\hex{30}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & BMS servis protokolü tamamlayıcı dokümanı oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 \section{Amaç ve Kapsam}
 
@@ -49,7 +81,7 @@ yapılarını tanımlar.
 Ana ICD içerisinde tanımlanan aşağıdaki yapılar bu dokümanda tekrar
 tanımlanmaz:
 
-\begin{itemize}[nosep]
+\begin{itemize}
     \item 29-bit CAN-FD Extended Identifier yapısı,
     \item Priority alanı,
     \item Source ve Destination Node alanları,
@@ -101,7 +133,7 @@ desteklenmez.}
 
 BMS Service mesajları doğrudan:
 
-\begin{itemize}[nosep]
+\begin{itemize}
     \item DEOS\_NODE\_BMS\_MAIN veya
     \item DEOS\_NODE\_BMS\_AUX
 \end{itemize}
@@ -169,7 +201,7 @@ BMS Service yalnızca BMS\_MAIN ve BMS\_AUX node'ları için geçerlidir.
 
 Serviste iki farklı veri erişim modeli kullanılır:
 
-\begin{enumerate}[nosep]
+\begin{enumerate}
     \item Genel BMS bilgilerinin tek bir STATUS mesajında alınması,
     \item Değişken sayıda bulunan verilerin liste şeklinde alınması.
 \end{enumerate}
@@ -303,7 +335,7 @@ veriler için ortak liste aktarım yöntemi kullanılır.
 
 Bir liste request'i alındığında hedef BMS:
 
-\begin{enumerate}[nosep]
+\begin{enumerate}
     \item Mevcut tüm elemanları sırayla gönderir.
     \item Her CAN-FD frame'i yalnızca bir eleman içerir.
     \item Ardışık elemanlar nominal 100 ms aralıkla gönderilir.
@@ -772,7 +804,7 @@ DIAGNOSTIC & 0x03 & CLEAR\_FAULTS \\
 % =========================================================
 \section{Uygulama Kuralları}
 
-\begin{enumerate}[nosep]
+\begin{enumerate}
 
     \item BMS\_MAIN ve BMS\_AUX bağımsız DEOS node'larıdır.
 

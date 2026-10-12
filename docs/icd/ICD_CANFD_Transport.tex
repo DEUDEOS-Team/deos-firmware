@@ -42,18 +42,54 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\textbf{DEOS CAN-FD Transport Adapter ICD}\\
-\large Sürüm 1.0}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{12 Ekim 2026}
+\large Sürüm 1.1 -- Fiziksel CAN-FD Taşıma Katmanı}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-TRP-CANFD-005} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & CAN-FD Taşıma Adaptörü (29-bit ID, DLC, BRS) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Modüler CAN-FD taşıma adaptörü ayrımı. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, Evrensel Çerçeve dönüşüm mekanizması entegrasyonu ve kurumsal üstveri eklemesi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 \section{Giriş ve Kapsam}
 
 DEOS protokolü medya bağımsız (medya agnostik) bir mimariye sahiptir. Araç içi ana omurga haberleşmesi olarak ise \textbf{CAN-FD (Controller Area Network Flexible Data-Rate)} fiziksel katmanı ve veri bağı (Data Link) katmanı kullanılır.
 
 Bu doküman, medyanın üstündeki soyut DEOS Evrensel Çerçevesi'nin (\code{Universal DEOS Transport Frame}) CAN-FD donanımı üzerinde nasıl temsil edildiğini, 29-bit Extended Identifier bit yerleşimini, CAN-FD DLC yuvarlama ve doldurma (padding) kurallarını, Bit Rate Switching (BRS) ve filtreleme kurallarını tanımlar.
+
+\subsection{Evrensel Çerçeveden CAN-FD'ye Dönüşüm}
+
+Çekirdek protokolde tanımlanan standart 9+N baytlık Evrensel Çerçeve (Universal Frame), CAN-FD omurgasına aktarılırken iki parçaya ayrıştırılır:
+\begin{enumerate}
+    \item \textbf{29-bit CAN Identifier (Arbitration Alanı):} Byte 0 (\code{Destination Node}), Byte 1 (\code{Source Node}), Byte 2 (\code{Priority}), Byte 4 (\code{Message Class}) ve Byte 5 (\code{Service ID}) alanları donanımsal bus arbitration ve filtreleme amacıyla 29-bit Extended ID'ye dönüştürülür.
+    \item \textbf{CAN-FD Veri Alanı (Payload):} Byte 3 (\code{Version}), Byte 7 (\code{Sequence}), Byte 6 (\code{Command}), Byte 8 (\code{Payload Length}) ve ardından gelen dinamik $N$ bayt \code{Payload} doğrudan CAN-FD frame'inin veri alanına yazılır.
+\end{enumerate}
 
 \section{29-bit Extended CAN Identifier Yapısı}
 

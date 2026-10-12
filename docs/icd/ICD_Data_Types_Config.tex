@@ -45,22 +45,41 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS Data Types \& Config}\\
-\large Sürüm 0.3}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{}
+\title{\textbf{DEOS Data Types \& Parameter Configuration ICD}\\
+\large Sürüm 1.1 -- Ortak Veri Tipleri ve Yapılandırma Parametreleri}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
 
 \begin{center}
-\begin{tabular}{ll}
-\textbf{Doküman tipi:} & Interface Control Document (ICD) \\
-\textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
-\textbf{Taşıma altyapısı:} & CAN-FD ana omurga \\
-\textbf{Durum:} & ICD Sürüm 0.3 -- v1.1 wire-format revizyonu \\
-\end{tabular}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-DATA-002} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & Ortak Veri Tipleri ve CONFIG Parametreleri \\
+\bottomrule
+\end{tabularx}
 \end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Modüler ICD ayrımı. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, State/Mode Registry Çekirdek Mimariye aktarıldı, veri tipleri ve CONFIG ayrımı netleştirildi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 
 \section{Veri Tipleri ve Byte Sırası}
@@ -205,72 +224,5 @@ ID & Symbol & Açıklama \\
 \bottomrule
 \end{tabularx}
 \end{center}
-
-\section{State ve Mode Registry}
-
-State, düğümün anlık çalışma durumunu; Mode ise düğümün hangi çalışma davranışı altında
-olduğunu ifade eder. İki alan birbirinden bağımsızdır.
-
-\subsection{State Enum}
-
-\begin{center}
-\begin{tabular}{c l}
-\toprule
-Değer & Symbol \\
-\midrule
-\hex{00} & \code{DEOS\_STATE\_INIT} \\
-\hex{01} & \code{DEOS\_STATE\_STANDBY} \\
-\hex{02} & \code{DEOS\_STATE\_READY} \\
-\hex{03} & \code{DEOS\_STATE\_ACTIVE} \\
-\hex{04} & \code{DEOS\_STATE\_CALIBRATING} \\
-\hex{05} & \code{DEOS\_STATE\_SAFE} \\
-\hex{06} & \code{DEOS\_STATE\_FAULT} \\
-\hex{FF} & \code{DEOS\_STATE\_UNKNOWN} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\begin{lstlisting}[style=cstyle]
-typedef enum
-{
-    DEOS_STATE_INIT        = 0x00,
-    DEOS_STATE_STANDBY     = 0x01,
-    DEOS_STATE_READY       = 0x02,
-    DEOS_STATE_ACTIVE      = 0x03,
-    DEOS_STATE_CALIBRATING = 0x04,
-    DEOS_STATE_SAFE        = 0x05,
-    DEOS_STATE_FAULT       = 0x06,
-    DEOS_STATE_UNKNOWN     = 0xFF
-} deos_state_t;
-\end{lstlisting}
-
-\subsection{Mode Enum}
-
-\begin{center}
-\begin{tabular}{c l}
-\toprule
-Değer & Symbol \\
-\midrule
-\hex{00} & \code{DEOS\_MODE\_NORMAL} \\
-\hex{01} & \code{DEOS\_MODE\_MANUAL} \\
-\hex{02} & \code{DEOS\_MODE\_AUTONOMOUS} \\
-\hex{03} & \code{DEOS\_MODE\_SERVICE} \\
-\hex{04} & \code{DEOS\_MODE\_TEST} \\
-\hex{FF} & \code{DEOS\_MODE\_UNKNOWN} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\begin{lstlisting}[style=cstyle]
-typedef enum
-{
-    DEOS_MODE_NORMAL     = 0x00,
-    DEOS_MODE_MANUAL     = 0x01,
-    DEOS_MODE_AUTONOMOUS = 0x02,
-    DEOS_MODE_SERVICE    = 0x03,
-    DEOS_MODE_TEST       = 0x04,
-    DEOS_MODE_UNKNOWN    = 0xFF
-} deos_mode_t;
-\end{lstlisting}
 
 \end{document}

@@ -45,22 +45,41 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS Network \& System Management}\\
-\large Sürüm 0.3}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{}
+\title{\textbf{DEOS Network \& System Management ICD}\\
+\large Sürüm 1.1 -- SYSTEM Servisi ve Ağ Yönetimi}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
 
 \begin{center}
-\begin{tabular}{ll}
-\textbf{Doküman tipi:} & Interface Control Document (ICD) \\
-\textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
-\textbf{Taşıma altyapısı:} & CAN-FD ana omurga \\
-\textbf{Durum:} & ICD Sürüm 0.3 -- v1.1 wire-format revizyonu \\
-\end{tabular}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NET-003} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}) \& PING/PONG Ağ Erişilebilirliği \\
+\bottomrule
+\end{tabularx}
 \end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Ağ yönetimi bağımsız doküman oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 
 \section{SYSTEM Service Komutları}
@@ -185,7 +204,7 @@ correlation yalnızca Ping ID üzerinden yapılır.
 
 Geçerli ve kendisine yöneltilmiş bir PING alan her DEOS node'u aşağıdaki davranışı uygular:
 
-\begin{enumerate}[nosep]
+\begin{enumerate}
     \item PING mesajının Source Node ve Ping ID alanlarını okur.
     \item Yeni bir PONG mesajı oluşturur.
     \item PONG Source alanını kendi Node ID'si yapar.

@@ -41,22 +41,52 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS Lighting Subsystem ICD}\\
-\large v1.0}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{12 Ekim 2026}
+\title{\textbf{DEOS Lighting Service ICD}\\
+\large Sürüm 1.1 -- Aydınlatma Servisi (Hedef: Main STM32)}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
 
-\section{Aydınlatma (Lighting) Servisi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-SRV-LGHT-011} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & LIGHTING Servisi (\hex{08}) -- Hedef: Main STM32 (\hex{03}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
 
-Aydınlatma servisi araç kontrol beyni olan \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03}) tarafından yürütülür.
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Aydınlatma alt sistem ICD'si oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, servisin Main STM32 üzerinde çalıştığı netleştirildi, kurumsal üstveri eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
+
+\section{Aydınlatma (Lighting) Servisi Mimarisi}
+
+DEOS dağıtık mimarisinde Aydınlatma (Lighting) bağımsız bir fiziksel mikrodenetleyici veya mantıksal düğüm (Node) değildir; araç ana kontrol beyni olan \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03}) üzerinde doğrudan koşan fonksiyonel bir servistir (\code{DEOS\_SERVICE\_LIGHTING}, \hex{08}).
+
+Dolayısıyla, yer istasyonundan (Ground Control), Textual arayüzden veya otonom planlayıcıdan gönderilecek tüm aydınlatma mesajlarının hedef düğüm adresi (Destination Node) her zaman \textbf{Main STM32} olmalıdır:
 
 \begin{itemize}
     \item \textbf{Hedef Düğüm (Destination Node):} \code{DEOS\_NODE\_MAIN\_STM32} (\hex{03})
-    \item \textbf{Fonksiyonel Servis:} \code{DEOS\_SERVICE\_LIGHTING} (\hex{08})
-    \item \textbf{Mesaj Sınıfı:} \code{DEOS\_CLASS\_COMMAND} (\hex{1})
+    \item \textbf{Fonksiyonel Servis (Service ID):} \code{DEOS\_SERVICE\_LIGHTING} (\hex{08})
+    \item \textbf{Mesaj Sınıfı (Message Class):} \code{DEOS\_CLASS\_COMMAND} (\hex{01})
 \end{itemize}
 
 \subsection{Far ID Tanımları (Light ID)}

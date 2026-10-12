@@ -6,8 +6,10 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{tabularx}
 \usepackage{xcolor}
 \usepackage{listings}
+\usepackage[hidelinks]{hyperref}
 
 \geometry{
     top=2cm,
@@ -19,6 +21,9 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
 
+\newcommand{\hex}[1]{\texttt{0x#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
 \lstset{
     basicstyle=\ttfamily\small,
     columns=fullflexible,
@@ -26,13 +31,42 @@
     breaklines=true
 }
 
-\title{\textbf{DEOS Fault Management Tanımı}}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{}
+\title{\textbf{DEOS Fault Management \& Diagnostics ICD}\\
+\large Sürüm 1.1 -- DIAGNOSTIC Servisi ve Hata Yönetimi}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-DIAG-004} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & DIAGNOSTIC Servisi (\hex{02}) \& Hata Kodları Registry \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Hata yönetimi bağımsız doküman oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 \section{Amaç}
 
@@ -50,7 +84,7 @@ Fault kayıtlarının diğer node'lara aktarılması
 
 Bu doküman;
 
-\begin{itemize}[nosep]
+\begin{itemize}
     \item fault kayıt yapısını,
     \item fault kimliklendirme yöntemini,
     \item \texttt{GET\_FAULTS} davranışını,
@@ -534,7 +568,7 @@ uygulamak zorundadır.
 
 \subsection{BMS Main ve BMS Aux}
 
-BMS_MAIN ve BMS_AUX ayrı DEOS Node ID'lerine sahip olduğundan,
+\texttt{BMS\_MAIN} ve \texttt{BMS\_AUX} ayrı DEOS Node ID'lerine sahip olduğundan,
 aynı Fault ID registry'sini birbirlerinden bağımsız olarak
 kullanabilirler.
 
@@ -559,7 +593,7 @@ kullanabilirler.
 BMS fault'ları gateway tarafından DALY BMS bilgilerinden üretilse
 bile DEOS mesajındaki Source Node ilgili BMS node'u olmalıdır.
 
-Örneğin BMS_MAIN fault'u:
+Örneğin \texttt{BMS\_MAIN} fault'u:
 
 \begin{lstlisting}
 Source  = DEOS_NODE_BMS_MAIN
@@ -593,7 +627,7 @@ DEOS_NODE_BMS_GATEWAY
 
 olmalıdır.
 
-Gateway'in BMS_MAIN veya BMS_AUX adına oluşturduğu fault'larda ise
+Gateway'in \texttt{BMS\_MAIN} veya \texttt{BMS\_AUX} adına oluşturduğu fault'larda ise
 Source Node ilgili mantıksal BMS Node ID'si olarak korunmalıdır.
 
 \subsection{Textual Node}

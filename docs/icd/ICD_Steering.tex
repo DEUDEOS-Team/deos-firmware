@@ -27,17 +27,51 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS Steering Node ICD}\\
-\large v1.0 (PDF Revizyonu)}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{28 Eylül 2026}
+\title{\textbf{DEOS Steering Node \& Service ICD}\\
+\large Sürüm 1.1 -- Direksiyon Düğümü (\hex{11}) ve Servisi (\hex{02})}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
 
-\section{Direksiyon (Steering) Alt Sistemi (0x11)}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NODE-STR-009} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & Steering Düğümü (\hex{11}) \& STEERING Servisi (\hex{02}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
 
-Direksiyon sistemi \code{DEOS\_NODE\_STEERING} (\hex{11}) adresindedir.
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 28 Eylül 2026 & Emir Arkalı & Direksiyon alt sistemi bağımsız doküman revizyonu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, düğüm ve servis ayrımı netleştirildi, kurumsal üstveri eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
+
+\section{Direksiyon (Steering) Düğüm ve Servis Mimarisi}
+
+DEOS mimarisinde direksiyon alt sistemi, hem donanımsal/mantıksal bir \textbf{Düğüm (Node)} hem de bu düğüm üzerinde çalışan birincil \textbf{Servis (Service)} olarak tanımlanır:
+
+\begin{itemize}
+    \item \textbf{Mantıksal Düğüm (Node ID):} \code{DEOS\_NODE\_STEERING} (\hex{11})
+    \item \textbf{Birincil Fonksiyonel Servis (Service ID):} \code{DEOS\_SERVICE\_STEERING} (\hex{02})
+    \item \textbf{Desteklenen Ortak Servisler:} \code{DEOS\_SERVICE\_SYSTEM} (\hex{00}), \code{DEOS\_SERVICE\_DIAGNOSTIC} (\hex{02})
+\end{itemize}
 
 \subsection{Gerçek Zamanlı Kontrol Komutları (Real-Time RX)}
 \begin{center}

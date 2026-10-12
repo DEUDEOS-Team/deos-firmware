@@ -4,8 +4,10 @@
 \usepackage[T1]{fontenc}
 \usepackage{geometry}
 \usepackage{tabularx}
+\usepackage{booktabs}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
 
 \geometry{
     a4paper,
@@ -18,14 +20,42 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS TCP/Ethernet (Textual) ICD}\\
-\large Sürüm 1.0}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{\today}
+\title{\textbf{DEOS TCP/Ethernet Transport Adapter ICD}\\
+\large Sürüm 1.1 -- Textual / Ethernet Arayüzü}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-TRP-TCP-006} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & TCP/IP Akış Taşıma Adaptörü \& Python Client \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & TCP/Ethernet adaptörü bağımsız doküman oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, protokol versiyon değeri v1.1 (\hex{11}) olarak senkronize edildi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 \section{Giriş ve Kapsam}
 Bu doküman, DEOS ağındaki bir düğüm (Main Node) ile \textbf{Python Textual Arayüzü (Raspberry Pi vb.)} arasında \textbf{TCP Soket} üzerinden kurulacak haberleşmenin kurallarını ve çerçeve (framing) yapısını tanımlar. TCP protokolü zaten kendi içinde hata denetimi (Checksum) ve paket sırası garantisi sunduğu için, LoRa tarafındaki MAGIC, CRC ve FLAG baytlarına bu arayüzde \textbf{ihtiyaç duyulmaz}.
@@ -75,7 +105,7 @@ Textual arayüzünden karta yollanacak, içerisinde "69" Ping ID'si bulunan bir 
 \textbf{3}  & service & \hex{01} & DEOS\_SERVICE\_SYSTEM \\
 \textbf{4}  & destination & \hex{06} & DEOS\_NODE\_TEXTUAL \\
 \textbf{5}  & source & \hex{02} & DEOS\_NODE\_GROUND\_CONTROL \\
-\textbf{6}  & version & \hex{01} & Protokol Versiyonu \\
+\textbf{6}  & version & \hex{11} & Protokol Versiyonu (v1.1) \\
 \textbf{7}  & sequence & \hex{05} & Mesaj Sıra No \\
 \textbf{8}  & command & \hex{01} & DEOS\_CMD\_SYSTEM\_PING \\
 \textbf{9}  & payload[0] & \hex{45} & PING ID: 69 (Little Endian) LSB \\
@@ -102,7 +132,7 @@ mclass = 1
 service = 1
 dest = 1     # MAIN_NODE
 src = 6      # TEXTUAL_NODE
-ver = 1
+ver = 0x11   # DEOS v1.1 (0x11)
 seq = 5
 cmd = 2      # DEOS_CMD_SYSTEM_PONG
 pong_id = 69

@@ -44,14 +44,42 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS LoRa Telemetry ICD}\\
-\large Sürüm 1.0}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{\today}
+\title{\textbf{DEOS LoRa Telemetry Transport Adapter ICD}\\
+\large Sürüm 1.1 -- Uzak Telemetri ve Yer İstasyonu}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-TRP-LORA-007} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & LoRa UART Taşıma Adaptörü \& CRC-CCITT \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & LoRa telemetri adaptörü bağımsız doküman oluşturuldu. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 \section{Giriş ve Kapsam}
 Bu doküman (ICD), DEOS araç içi ağı (CAN-FD / Ethernet) ile \textbf{Yer Kontrol İstasyonu} arasında kurulan \textbf{LoRa (Uzun Mesafe Radyo)} tabanlı telemetri haberleşmesinin kurallarını, çerçeve (framing) yapısını ve hata telafi (ACK/Retry) algoritmalarını tanımlar.

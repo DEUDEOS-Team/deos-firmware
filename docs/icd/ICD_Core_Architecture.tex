@@ -47,20 +47,39 @@
 
 \title{\textbf{DEOS Core Protocol Architecture}\\
 \large Sürüm 1.1 -- Medya Bağımsız Çekirdek Protokol}
-\author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{12 Ekim 2026}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
 
 \begin{document}
 \maketitle
 
 \begin{center}
-\begin{tabular}{ll}
-\textbf{Doküman tipi:} & Core Protocol Specification \& Architecture ICD \\
-\textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
-\textbf{Taşıma altyapısı:} & Medya Bağımsız (CAN-FD, Ethernet, LoRa, ROS 2) \\
-\textbf{Durum:} & ICD Sürüm 1.1 \\
-\end{tabular}
+\small
+\begin{tabularx}{\textwidth}{ll lX}
+\toprule
+\textbf{Doküman Tipi:} & Core Protocol Specification \& Architecture & \textbf{Doküman Kodu:} & \code{DOC-ICD-CORE-001} \\
+\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & Medya Bağımsız Çekirdek Mimari \\
+\bottomrule
+\end{tabularx}
 \end{center}
+
+\subsection*{Doküman Revizyon Geçmişi}
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{c c l X}
+\toprule
+\textbf{Revizyon} & \textbf{Tarih} & \textbf{Yazar / Değiştiren} & \textbf{Açıklama} \\
+\midrule
+v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
+v1.0 & 04 Ekim 2026 & Emir Arkalı & Modüler ICD ayrımı ve çekirdek mimari taslağı. \\
+v1.1 & 13 Ekim 2026 & Emir Arkalı & Medya bağımsız mimari (Universal Frame) kesinleştirildi, CAN-FD detayları ilgili adaptöre devredildi, State/Mode Registry eklendi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{0.8em}
 
 
 \section{Amaç ve Kapsam}
@@ -464,13 +483,15 @@ Evrensel çerçeve, \textbf{9 Byte Sabit Başlık (Header)} ve ardından gelen $
 
 \textbf{Toplam Paket Boyutu:} $9 + N$ Byte.
 
-\subsection{CAN-FD Dönüşüm Mekanizması}
+\subsection{Taşıma Katmanı Adaptasyonu}
 
-Bu çerçeve STM32 Gateway/Router düğümüne ulaştığında:
-\begin{enumerate}
-    \item \textbf{29-bit CAN ID:} Byte 0 (\code{Destination}), Byte 1 (\code{Source}), Byte 2 (\code{Priority}), Byte 4 (\code{Message Class}) ve Byte 5 (\code{Service}) alanları sürücü tarafından otomatik olarak 29-bit Extended CAN Identifier'a dönüştürülür.
-    \item \textbf{CAN-FD Data Payload:} Byte 3 (\code{Version}), Byte 7 (\code{Sequence}), Byte 6 (\code{Command}), Byte 8 (\code{Payload Length}) ve ardından gelen \code{Payload} alanları doğrudan CAN-FD frame'inin veri alanına yazılır.
-\end{enumerate}
+Standart Evrensel Çerçeve ($9+N$ Byte), kullanılacak fiziksel taşıma hattına göre ilgili adaptör sürücüsü tarafından uygun şekilde paketlenir veya dönüştürülür:
+
+\begin{itemize}
+    \item \textbf{CAN-FD Omurgası (\code{ICD\_CANFD\_Transport}):} Çerçevenin yönlendirme ve öncelik alanları (Destination, Source, Priority, Message Class, Service) 29-bit Extended CAN Identifier'a dönüştürülür. Çerçevenin geri kalan Version, Sequence, Command, Length ve Payload alanları CAN-FD veri alanına (Data Payload) yazılır. Donanımsal DLC yuvarlama ve BRS kuralları uygulanır.
+    \item \textbf{TCP/Ethernet Arayüzü (\code{ICD\_Ethernet\_TCP}):} Akış tabanlı TCP soketinde çerçevenin başına 1 baytlık uzunluk öneki (\code{Length}) eklenerek \code{[Length (1B)] + [Standart DEOS Frame (9+N Byte)]} formatında iletilir.
+    \item \textbf{LoRa / Seri Port Arayüzü (\code{ICD\_LoRa\_Telemetry}):} Senkronizasyon (\hex{AA} \hex{55}), bayrak ve CRC16 kontrolü içeren paket yapısı ile sarmalanır.
+\end{itemize}
 
 \subsection{Fiziksel İletim Katmanlarına Göre Dış Zarf (L2 Framing)}
 
@@ -557,18 +578,88 @@ Kod & Anlam \\
 Bu alanın kesin payload yerleşimi sonraki ICD revizyonunda mesaj bazında ayrıntılandırılacaktır.
 
 
+\section{State ve Mode Registry}
+
+DEOS protokolünde sistem durumları iki bağımsız kavramla ele alınır:
+\begin{itemize}
+    \item \textbf{State (Durum):} Düğümün veya aracın anlık operasyonel hazırlık seviyesini belirtir (\code{INIT}, \code{STANDBY}, \code{READY}, \code{ACTIVE}, \code{FAULT} vb.).
+    \item \textbf{Mode (Mod):} Düğümün veya aracın hangi kontrol davranışı ve otonomi mantığı altında çalıştığını belirtir (\code{NORMAL}, \code{MANUAL}, \code{AUTONOMOUS}, \code{SERVICE}, \code{TEST} vb.).
+\end{itemize}
+
+\subsection{State Enum}
+
+\begin{center}
+\begin{tabular}{c l}
+\toprule
+Değer & Symbol \\
+\midrule
+\hex{00} & \code{DEOS\_STATE\_INIT} \\
+\hex{01} & \code{DEOS\_STATE\_STANDBY} \\
+\hex{02} & \code{DEOS\_STATE\_READY} \\
+\hex{03} & \code{DEOS\_STATE\_ACTIVE} \\
+\hex{04} & \code{DEOS\_STATE\_CALIBRATING} \\
+\hex{05} & \code{DEOS\_STATE\_SAFE} \\
+\hex{06} & \code{DEOS\_STATE\_FAULT} \\
+\hex{FF} & \code{DEOS\_STATE\_UNKNOWN} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[style=cstyle]
+typedef enum
+{
+    DEOS_STATE_INIT        = 0x00,
+    DEOS_STATE_STANDBY     = 0x01,
+    DEOS_STATE_READY       = 0x02,
+    DEOS_STATE_ACTIVE      = 0x03,
+    DEOS_STATE_CALIBRATING = 0x04,
+    DEOS_STATE_SAFE        = 0x05,
+    DEOS_STATE_FAULT       = 0x06,
+    DEOS_STATE_UNKNOWN     = 0xFF
+} deos_state_t;
+\end{lstlisting}
+
+\subsection{Mode Enum}
+
+\begin{center}
+\begin{tabular}{c l}
+\toprule
+Değer & Symbol \\
+\midrule
+\hex{00} & \code{DEOS\_MODE\_NORMAL} \\
+\hex{01} & \code{DEOS\_MODE\_MANUAL} \\
+\hex{02} & \code{DEOS\_MODE\_AUTONOMOUS} \\
+\hex{03} & \code{DEOS\_MODE\_SERVICE} \\
+\hex{04} & \code{DEOS\_MODE\_TEST} \\
+\hex{FF} & \code{DEOS\_MODE\_UNKNOWN} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[style=cstyle]
+typedef enum
+{
+    DEOS_MODE_NORMAL     = 0x00,
+    DEOS_MODE_MANUAL     = 0x01,
+    DEOS_MODE_AUTONOMOUS = 0x02,
+    DEOS_MODE_SERVICE    = 0x03,
+    DEOS_MODE_TEST       = 0x04,
+    DEOS_MODE_UNKNOWN    = 0xFF
+} deos_mode_t;
+\end{lstlisting}
+
 \section{Mantıksal Node Kimliği Kuralı}
 
-CAN hattında her Source ve Destination Node ID bağımsız bir DEOS protokol kimliğidir.
+DEOS ağında her Source ve Destination Node ID bağımsız bir mantıksal protokol kimliğidir.
 Aynı fiziksel cihaz üzerinde birden fazla mantıksal Node ID bulunabilse bile, bir mesaj
-hangi Node ID adına üretiliyorsa CAN Identifier içerisindeki Source alanında o Node ID
+hangi Node ID adına üretiliyorsa çerçevenin Source alanında o Node ID
 kullanılmalıdır.
 
 Bir node başka bir node'un kimliğiyle cevap üretmemelidir. Örneğin
 \code{Destination = DEOS\_NODE\_BMS\_MAIN} olan geçerli bir PING'e verilen PONG mesajında
 \code{Source = DEOS\_NODE\_BMS\_MAIN} kullanılmalıdır.
 
-Bu kural fiziksel yerleşimden bağımsızdır; CAN hattındaki diğer katılımcılar mantıksal
+Bu kural fiziksel yerleşimden ve taşıma katmanından bağımsızdır; ağdaki tüm katılımcılar mantıksal
 Node ID'leri bağımsız haberleşme uçları olarak değerlendirir.
 
 \section{İsimlendirme Standardı}
@@ -606,32 +697,21 @@ DEOS_MODE_AUTONOMOUS
 
 \section{Özet Registry}
 
-Mevcut CAN-FD protokol kararları aşağıdaki şekilde özetlenebilir:
+Mevcut DEOS Çekirdek Protokol kararları aşağıdaki şekilde özetlenebilir:
 
 \begin{itemize}
-    \item Ana araç içi haberleşme hattı CAN-FD'dir.
-    \item 29-bit Extended CAN Identifier kullanılır.
-    \item CAN-FD frame'lerinde BRS kullanılır.
-    \item Priority, Message Class, Service, Destination ve Source alanları CAN Identifier içerisinde taşınır.
-    \item Node ID, sistem genelinde kullanılan 8-bit mantıksal protokol kimliğidir.
-    \item Aynı fiziksel cihaz birden fazla mantıksal Node ID barındırabilir; CAN hattında her biri bağımsız kimliktir.
-    \item DEOS Protocol v1.1 sürüm değeri \hex{11}'dir.
-    \item Ortak DEOS data header'ı Version, Sequence, Command ve Length olmak üzere 4 byte'tır.
-    \item Command-specific maksimum payload uzunluğu 60 byte'tır.
-    \item Length, yalnızca geçerli command-specific payload byte sayısını belirtir.
-    \item DLC fiziksel CAN-FD data field boyutunu; Length ise semantic DEOS payload boyutunu ifade eder.
-    \item DLC yuvarlaması sonucu oluşan kullanılmayan byte'lar \hex{00} padding olarak gönderilir.
-    \item Uygulama seviyesinde ek CRC veya ayrıca sync header kullanılmaz.
-    \item Sequence alanı Source Node başına kullanılır; v1.1'de gap/duplicate kontrolü zorunlu değildir.
-    \item REQUEST, RESPONSE ve CONFIG birbirinden ayrı Message Class değerleridir.
-    \item CONFIG ayrı bir Service değildir.
-    \item Parameter ID 16-bit'tir ve Service namespace'i içinde anlam kazanır.
-    \item Varsayılan çok baytlı wire byte sırası Little-Endian'dır.
-    \item Fiziksel değerlerde varsayılan yaklaşım ölçekli integer kullanımıdır.
-    \item PING/PONG, \code{DEOS\_CLASS\_NETWORK / DEOS\_SERVICE\_SYSTEM} altında tanımlıdır.
-    \item PING ve PONG command payload'u 4-byte Ping ID içerir ve Length alanı \hex{04}'tür.
-    \item PING yalnız unicast olarak geçerlidir; Broadcast PING'e PONG üretilmez.
-    \item Bir cevabın Source Node değeri, cevabı üreten mantıksal node kimliği olmalıdır.
+    \item DEOS protokolü medya bağımsızdır (CAN-FD, TCP/Ethernet, LoRa UART, ROS 2).
+    \item Standart Evrensel Taşıma Çerçevesi (Universal Frame) 9 bayt sabit başlık ve $N$ bayt dinamik payloaddan oluşur.
+    \item 9-bayt sabit başlık sırasıyla: Destination Node, Source Node, Priority, Version, Message Class, Service ID, Command ID, Sequence ve Payload Length alanlarını içerir.
+    \item DEOS Protocol v1.1 wire sürüm değeri \hex{11}'dir.
+    \item Node ID, sistem genelinde kullanılan 8-bit mantıksal protokol kimliğidir (\hex{00}--\hex{FF}).
+    \item Bir fiziksel donanım üzerinde birden fazla mantıksal Node ID barınabilir; ağda her biri bağımsız bir uçtur.
+    \item Priority alanı 0 (\hex{00} CRITICAL) ile 5 (\hex{05} NETWORK) arasında değer alır.
+    \item Çoklu taşıma ortamlarına aktarım, ilgili Taşıma Adaptörleri (\code{ICD\_CANFD\_Transport}, \code{ICD\_Ethernet\_TCP}, \code{ICD\_LoRa\_Telemetry}) tarafından şeffaf olarak yürütülür.
+    \item Fiziksel CAN-FD omurgasında Destination, Source, Priority, Class ve Service alanları 29-bit CAN Identifier'a kodlanır.
+    \item Durum yönetimi birbirinden bağımsız State ve Mode enumarasyonları ile sağlanır.
+    \item Varsayılan çok baytlı sayısal veri sırası Little-Endian'dır.
+    \item Bir cevabın (RESPONSE) Source Node değeri, cevabı üreten mantıksal node kimliği olmalıdır.
 \end{itemize}
 
 \end{document}
