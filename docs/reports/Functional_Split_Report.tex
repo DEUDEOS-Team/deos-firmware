@@ -1,0 +1,195 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{ragged2e}
+\usepackage[hidelinks]{hyperref}
+
+\geometry{
+    a4paper,
+    top=2cm,
+    bottom=2cm,
+    left=2cm,
+    right=2cm
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.25}
+
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+
+\title{\textbf{DEOS Sistem Mimarisi: Fonksiyonel Dağılım ve Sorumluluk Raporu}\\
+\large Sürüm 0.1 (Taslak) -- Otonom, Merkezi Beyin ve Alt ECU Sorumluluk Matrisi}
+\author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{p{3.2cm}p{4.5cm} p{3.2cm}X}
+\toprule
+\textbf{Doküman Tipi:} & Mimari Tasarım Raporu & \textbf{Doküman Kodu:} & \texttt{DOC-REP-SPLIT-001} \\
+\textbf{Doküman Sürümü:} & Sürüm 0.1 (Taslak / Draft) & \textbf{Sistem Sürümü:} & DEOS v1.1 Mimarisi \\
+\textbf{Yazar:} & Emir Arkalı & \textbf{İnceleyen:} & DEOS Mühendislik Ekibi \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{Durum:} & İnceleniyor / Erken Taslak & \textbf{Kapsam:} & ROS 2, Bridge, Main, Alt ECU'lar \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{1em}
+
+\section{Giriş ve Problem Tanımı}
+
+Karmaşık dağıtık gömülü sistemlerde ve otonom araç platformlarında, sistemin başarısı yalnızca haberleşme paketlerinin bayt seviyesinde tanımlanmasıyla (ICD) sınırlı değildir. En sık karşılaşılan sistem entegrasyonu problemleri, \textbf{"Hangi fonksiyonun nerede koştuğu"} konusundaki gri alanlardan (belirsizliklerden) kaynaklanır.
+
+Örneğin:
+\begin{itemize}
+    \item Hız ve tekerlek açısı PID hesaplamaları otonom yazılımda mı yoksa motor sürücüde mi koşmalıdır?
+    \item Sinyal lambasının yanıp sönme frekansı (1 Hz flaşör) otonom planlayıcı tarafından mı tetiklenmelidir, yoksa donanımsal timer'a mı devredilmelidir?
+    \item Acil durdurma ve timeout durumlarında aracı durdurma yetkisi kimdedir?
+\end{itemize}
+
+Bu rapor; araç üstü **ROS 2 Otonom Sürüş Bilgisayarı (IPC)**, **Ağ Köprüsü (\texttt{deos\_ros\_bridge})**, **Merkezi Araç Kontrolcüsü (\texttt{Main STM32 / VCU})** ve **Alt Donanım ECU'ları (Traction, Steering, Brake, BMS)** arasındaki görev paylaşımını ve yetki hiyerarşisini (Functional Split) resmiyete döker.
+
+\section{Mimari Katmanlar ve Düğüm Görevleri}
+
+Sistem hiyerarşik olarak 4 ana operasyonel katmana ayrılmıştır:
+
+\begin{enumerate}
+    \item \textbf{Katman 1: Üst Seviye Otonom Sürüş (ROS 2 / IPC)}:
+    Çevre algılama (LiDAR, Kamera), yapay zeka nesne tespiti, SLAM haritalama, rota ve yörünge planlaması. Saf SI birimleriyle ($m/s$, $rad$, $rad/s$) çalışır.
+    
+    \item \textbf{Katman 2: Ağ Köprüsü (\texttt{deos\_ros\_bridge} / UDP Port 5001)}:
+    ROS 2 SI birimleri ile gömülü ağın fixed-point ($0.01\ m/s$, $0.01^\circ$) değerleri arasındaki köprüdür. Ackermann kinematiğini çözer ve 200 ms komut zaman aşımını takip eder.
+    
+    \item \textbf{Katman 3: Merkezi Araç Beyni (\texttt{Main STM32 / VCU})}:
+    Aracın durum makinesini (State Machine) yönetir. Donanımsal E-STOP butonu, ağ yönlendiricisi (Router), ağ canlılık bekçisi (Watchdog) ve aydınlatma donanım sürücüsünü (\texttt{LedController}) barındırır.
+    
+    \item \textbf{Katman 4: Aktüatör ve Sensör Düğümleri (CAN-FD Omurgası)}:
+    Traction ECU (Motor akım ve PWM sürücüsü), Steering ECU (Direksiyon kapalı çevrim kontrolü), Brake ECU (Hidrolik/mekanik frenleme) ve BMS Gateway (Batarya hücre koruması).
+\end{enumerate}
+
+\clearpage
+
+\section{Fonksiyonel Sorumluluk Matrisi (Functional Allocation)}
+
+Aşağıdaki tablo, sistemdeki temel işlevlerin hangi katmanlar tarafından yürütüldüğünü kesin çizgilerle tanımlar:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|L{4.2cm}|L{2.8cm}|L{2.8cm}|L{2.8cm}|Y|}
+\hline
+\textbf{Fonksiyonel Alan} & \textbf{ROS 2 Otonom} & \textbf{ROS 2 Bridge} & \textbf{Main STM32} & \textbf{Alt ECU'lar} \\
+\hline
+\textbf{Algılama \& SLAM} & \textbf{Tam Sorumlu} & İlgisiz & İlgisiz & İlgisiz \\
+\hline
+\textbf{Yörünge Planlama} & \textbf{Tam Sorumlu} (\texttt{cmd\_vel}) & İlgisiz & İlgisiz & İlgisiz \\
+\hline
+\textbf{Ackermann Kinematiği} & İlgisiz & \textbf{Çevirici} ($v, \omega \rightarrow v, \delta$) & Limit Denetimi & İlgisiz \\
+\hline
+\textbf{Birim Ölçekleme} & İlgisiz (Saf SI) & \textbf{Tam Sorumlu} & Fixed-point & Fixed-point \\
+\hline
+\textbf{Motor Akım/Hız PID} & İlgisiz & İlgisiz & İlgisiz & \textbf{Traction ECU} \\
+\hline
+\textbf{Direksiyon Açı PID} & İlgisiz & İlgisiz & İlgisiz & \textbf{Steering ECU} \\
+\hline
+\textbf{Fren Basıncı \& EBS} & İlgisiz & İlgisiz & E-STOP Talebi & \textbf{Brake ECU} \\
+\hline
+\textbf{Sinyal Flaşörü (1 Hz)} & Niyet Bildirimi & İletici & \textbf{Donanım Timer} & İlgisiz \\
+\hline
+\textbf{Fiziksel E-STOP} & İlgisiz & İlgisiz & \textbf{En Üst Otorite} & STO Koruması \\
+\hline
+\textbf{Araç Durum Makinesi} & Durum İzleyici & İletici & \textbf{Tek Karar Verici}& Durum Takipçisi \\
+\hline
+\textbf{Batarya Koruma / BMS} & Telemetri İzleyici & İletici & Güvenlik Kapatması & \textbf{BMS Gateway} \\
+\hline
+\end{tabularx}
+\caption{DEOS Fonksiyonel Dağılım ve Görev Matrisi}
+\end{table}
+
+\section{Kritik Sınırların ve Gri Alanların Çözümü}
+
+\subsection{Aydınlatma ve Sinyal Lambası Ayrımı (Blinker Logic)}
+\begin{itemize}
+    \item Otonom sürüş yazılımı saniyede 1 kez lambayı açıp kapatarak ağ trafiğini gereksiz paketlerle boğmaz.
+    \item ROS 2 sadece niyet bildirir: \texttt{/vehicle/signals/right = true} (\texttt{On Change}).
+    \item Main STM32 üzerindeki \texttt{LedController}, dahili 10 ms döngüsünde çalışan zamanlayıcı ile lambayı 1 Hz periyotla (\%50 duty cycle) donanımsal olarak yakıp söndürür. Sürüş tamamlandığında ROS 2 \texttt{false} gönderir ve donanım söner.
+\end{itemize}
+
+\subsection{Kinematik Dönüşüm ve Motor Kontrol Sınırı}
+\begin{itemize}
+    \item ROS 2 aracı kinematik bir model olarak görür ve hedef hız ($v = \text{linear.x}$) ile hedef yaw açısal hızı ($\omega = \text{angular.z}$) üretir.
+    \item \texttt{deos\_ros\_bridge}, aracın dingil mesafesini ($L$) kullanarak Ackermann tekerlek açısını hesaplar:
+    $$\delta = \arctan\left(\frac{L \cdot \omega}{v}\right)$$
+    \item Elde edilen hedef hız Traction ECU'ya, hedef açı Steering ECU'ya aktarılır.
+    \item Her aktüatör ECU'su kendi içindeki yüksek frekanslı (1 kHz) akım ve tork geri besleme döngüsünü bağımsız işletir.
+\end{itemize}
+
+\subsection{Yetki Hiyerarşisi (Command Arbitration)}
+Hiçbir koşulda otonom planlayıcı doğrudan tekerleklere müdahale edemez. Çok katmanlı hakemlik kuralı uygulanır:
+
+\vspace{0.3em}
+\begin{center}
+\textbf{E-STOP (Donanım)} $\boldsymbol{\gg}$ \textbf{Yer Kontrolü (LoRa)} $\boldsymbol{\gg}$ \textbf{Watchdog Hatası} $\boldsymbol{\gg}$ \textbf{Manuel} $\boldsymbol{\gg}$ \textbf{Otonom (ROS 2)}
+\end{center}
+\vspace{0.3em}
+
+\begin{itemize}
+    \item Fiziksel E-STOP butonuna basıldığında Main STM32 \texttt{SafetyManager} anında \texttt{DEOS\_STATE\_SAFE} moduna geçer.
+    \item Bu komut CAN-FD omurgasında en yüksek öncelikle (\texttt{DEOS\_PRIO\_EMERGENCY}) yayınlanır.
+    \item ROS 2'nin bu güvenli duruş durumunu ezme veya devre dışı bırakma yetkisi kesinlikle yoktur.
+\end{itemize}
+
+\clearpage
+
+\section{Zaman Aşımı ve Failsafe Matrisi}
+
+Sistem bileşenlerinin iletişim kaybı veya donanım arızası yaşaması durumunda devreye girecek deterministik koruma mekanizmaları:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|L{4.5cm}|L{3.0cm}|c|Y|}
+\hline
+\textbf{Hata / Arıza Durumu} & \textbf{Tespit Eden Katman} & \textbf{Süre} & \textbf{Failsafe Davranışı} \\
+\hline
+\textbf{ROS 2 Komut Kesilmesi} & \texttt{deos\_ros\_bridge} & 200 ms & Hedef hız sıfırlanır, yumuşak duruş talep edilir. \\
+\hline
+\textbf{Ethernet Soket Kopması} & Main STM32 (UDP/TCP) & 500 ms & Otonom izin iptal edilir, araç \texttt{STANDBY}'a geçer. \\
+\hline
+\textbf{Traction ECU İletişim Kaybı} & Main STM32 (CAN-FD) & 500 ms & \texttt{DEOS\_STATE\_SAFE} ilan edilir, acil fren kilitlenir. \\
+\hline
+\textbf{Steering Açı Sensör Hatası} & Steering ECU & $<50$ ms & Motor torku kesilir, hata kodu fırlatılır. \\
+\hline
+\textbf{BMS Aşırı Sıcaklık/Voltaj} & BMS Gateway & $<100$ ms & Kritik arıza bildirilir, kontaktör kontrollü açılır. \\
+\hline
+\textbf{Fiziksel E-STOP Butonu} & Main STM32 GPIO & $<1$ ms & Tüm çekiş motorları enerjisiz kalır (STO), EBS kilitlenir. \\
+\hline
+\end{tabularx}
+\caption{Failsafe ve Zaman Aşımı Tetikleyicileri}
+\end{table}
+
+\section{Sonuç ve Geliştirme Yol Haritası}
+
+Bu rapor, sistemin erken geliştirme aşaması için bir taslak (\texttt{v0.1-DRAFT}) teşkil etmektedir. Projenin sonraki fazlarında:
+\begin{enumerate}
+    \item Dinamik tekerlek kayma açısı kompanzasyonu (Slip angle compensation),
+    \item Çift motorlu araçlar için Tork Vektörleme (Torque Vectoring) mantığının Traction ECU'ya yerleştirilmesi,
+    \item Mesafe sensörleri ile acil otonom frenleme (AEB) eşikleri,
+\end{enumerate}
+ayrıntılı olarak bu rapora dahil edilecektir.
+
+\end{document}
