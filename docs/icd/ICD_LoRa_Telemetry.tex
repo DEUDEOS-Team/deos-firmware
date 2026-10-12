@@ -87,8 +87,8 @@ Bu doküman (ICD), DEOS araç içi ağı (CAN-FD / Ethernet) ile \textbf{Yer Kon
 Yer Kontrol yazılımını geliştirecek mühendislerin, LoRa modülüne seri port (UART) üzerinden basacakları veriyi bu dokümanda belirtilen kurallara göre şekillendirmesi zorunludur.
 
 \section{Temel Mimari ve Şeffaflık (Transparency)}
-DEOS mimarisinde tüm mesajlar \code{deos\_message\_t} adlı 84 baytlık standart bir yapıya (struct) sahiptir.
-LoRa arayüzü, bu standart DEOS yapısını \textbf{hiç bozmadan} (şeffaf bir şekilde) havadan taşımakla yükümlüdür. Yer Kontrol İstasyonu, kendi içinde bir \code{deos\_message\_t} paketi oluşturur, bunu bir ``LoRa Çerçevesi (Frame)'' içine hapseder ve gönderir. Araçtaki Main Node (Gateway), bu çerçeveyi çözer, içinden orijinal DEOS mesajını çıkarır ve doğrudan aracın iç ağına (Router) yönlendirir.
+DEOS mimarisinde mesajlar bellek üzerinde \code{deos\_message\_t} adlı 84 baytlık azami tampon yapısına (\textit{8 bayt header + azami 76 bayt payload}) sahiptir.
+LoRa arayüzü, bu standart DEOS mesajını \textbf{hiç bozmadan} (şeffaf bir şekilde) havadan taşımakla yükümlüdür. Hava süresini (airtime) optimize etmek amacıyla bellekteki 84 baytın tamamı basılmaz; yalnızca 8 baytlık sabit başlık ile o anki \code{payload\_len} kadar gerçek veri baytı ($8 + N$ bayt) çerçevelenerek iletilir. Yer Kontrol İstasyonu, kendi içinde bir \code{deos\_message\_t} paketi oluşturur, bunu bir ``LoRa Çerçevesi (Frame)'' içine hapseder ve gönderir. Araçtaki Main Node (Gateway), bu çerçeveyi çözer, içinden orijinal DEOS mesajını çıkarır ve doğrudan aracın iç ağına (Router) yönlendirir.
 
 \section{LoRa Çerçeve (Frame) Yapısı}
 Seri haberleşmede byte kaymalarını (misalignment) engellemek ve havadaki veri kayıplarını saptamak için her mesaj bir \textbf{Senkronizasyon Başlığı (Header)} ve \textbf{CRC16} doğrulaması ile paketlenir.

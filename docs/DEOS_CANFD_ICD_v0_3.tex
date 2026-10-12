@@ -55,12 +55,24 @@
 
 \begin{center}
 \begin{tabular}{ll}
-\textbf{Doküman tipi:} & Interface Control Document (ICD) \\
+\textbf{Doküman tipi:} & Interface Control Document (ICD) -- \textbf{ARŞİV} \\
 \textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
 \textbf{Taşıma altyapısı:} & CAN-FD ana omurga \\
-\textbf{Durum:} & ICD Sürüm 0.3 -- v1.1 wire-format revizyonu \\
+\textbf{Durum:} & ICD Sürüm 0.3 (Monolitik Arşiv -- Güncel Değil) \\
 \end{tabular}
 \end{center}
+
+\begin{center}
+\fbox{
+\parbox{0.95\textwidth}{
+\textbf{\textcolor{red}{ARŞİV DOKÜMANI / DEPRECATION NOTICE:}}\\
+Bu tek parça (monolitik) ICD dokümanı (\textbf{Sürüm 0.3}), DEOS protokolünün ilk tasarım evresine ait olup geriye dönük referans amacıyla arşivlenmiştir.
+
+Güncel, modüler ve resmi protokol şartnamesi \code{docs/icd/} dizininde yer alan \textbf{Sürüm 1.1} doküman ailesidir (\code{DOC-ICD-CORE-001} ile \code{DOC-ICD-NODE-BMS-012} arası). Yeni geliştirme ve entegrasyon süreçlerinde modüler doküman setini esas alınız.
+}
+}
+\end{center}
+\vspace{0.8em}
 
 
 \section{Amaç ve Kapsam}

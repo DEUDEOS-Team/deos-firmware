@@ -69,30 +69,21 @@ v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üst
 
 \section{Amaç ve Kapsam}
 
-Bu doküman, ana \textit{DEOS CAN-FD Interface Control Document}
-içerisinde tanımlanan BMS haberleşme yapısını tamamlamak amacıyla
-hazırlanmıştır.
+Bu doküman, DEOS protokol mimarisinin batarya yönetim sistemi (BMS) haberleşme yapısını, telemetri parametrelerini ve kontrol komutlarını tanımlamak amacıyla hazırlanmıştır. Doküman referans kodu \textbf{DOC-ICD-NODE-BMS-012}'dir.
 
 Doküman; Textual Node, Ground Control Node, Main STM32,
 micro-ROS Node veya diğer yetkili DEOS node'larının batarya yönetim
 sisteminden bilgi alırken kullanacağı servis, komut ve payload
 yapılarını tanımlar.
 
-Ana ICD içerisinde tanımlanan aşağıdaki yapılar bu dokümanda tekrar
-tanımlanmaz:
-
+Çekirdek protokol kuralları ve taşıma katmanı detayları için ilgili modüler şartnameler esas alınmalıdır:
 \begin{itemize}
-    \item 29-bit CAN-FD Extended Identifier yapısı,
-    \item Priority alanı,
-    \item Source ve Destination Node alanları,
-    \item Message Class yapısı,
-    \item genel routing mekanizması,
-    \item Protocol Version ve Sequence alanları,
-    \item CAN-FD DLC ve padding kuralları,
-    \item Little-Endian byte-order kuralı.
+    \item \textbf{DOC-ICD-CORE-001 (Core Architecture):} Öncelik (Priority), Kaynak/Hedef Düğüm, Servis mantığı, Protocol Version, Sequence alanları ve genel yönlendirme mekanizmaları,
+    \item \textbf{DOC-ICD-TRP-CANFD-005 (CAN-FD Transport):} 29-bit CAN-FD Extended Identifier haritalama, DLC ve padding kuralları, Little-Endian bayt dizilimi,
+    \item \textbf{DOC-ICD-NET-003 (Network Management):} PING/PONG ve SYSTEM servis komutları standart davranışları.
 \end{itemize}
 
-Bu doküman ana ICD ile birlikte kullanılmalıdır.
+Bu doküman, yukarıda listelenen temel ICD dokümanları ile birlikte kullanılmalıdır.
 
 % =========================================================
 \section{BMS Sistemindeki Node'lar}
@@ -638,7 +629,7 @@ Bu alt sistemde kullanılan SYSTEM komutları:
 \end{tabular}
 \end{center}
 
-Bu komutların genel davranışı ana ICD içerisinde tanımlanmıştır.
+Bu komutların genel davranışı ve SYSTEM servisi akışı \textbf{DOC-ICD-NET-003 (Network Management)} içerisinde tanımlanmıştır.
 
 GET\_NODE\_INFO response command payload'u:
 
