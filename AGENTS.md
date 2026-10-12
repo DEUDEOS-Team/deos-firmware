@@ -6,7 +6,7 @@ These rules apply to ALL AI assistants, coders, and agents (Gemini, Claude, Deep
 
 - **Read-Only Access to Core Library**: AI agents are strictly prohibited from modifying the `deos_core` library located in the `lib/` directory. You are only allowed to read it to understand the underlying infrastructure.
 - **Approval Required for Core Changes**: Any modifications to the `deos_core` library must be explicitly asked to and approved by Emir Arkalı. Unauthorized changes will break the wire protocol and cause communication failures with other CAN nodes.
-- **Reporting Necessary Core Changes**: If a modification in the `lib/` directory is absolutely necessary for an application to function properly, the AI agent must report the situation to the user and document the problem as a markdown file in the `docs/issues/` directory instead of applying the changes directly.
+- **Reporting Necessary Core Changes**: If a modification in the `lib/` directory is absolutely necessary for an application to function properly, the AI agent must NOT apply the changes directly. Instead, the AI agent must report the situation to the user and open a formal GitHub Issue using the GitHub CLI (`gh issue create --title "[Core] ..." --body "..." --assignee "emirarkali" --label "bug"`), requesting Emir Arkalı's explicit review and approval.
 - **Scope of Permissions**: In general, developers and AI agents are only authorized to create and modify applications within the `apps/` directory (e.g., `apps/traction`, `apps/steering`). They do not have the authority to edit the core library without explicit permission.
 - **Language Choice**: Even though the core library is written in C, the application layer within the `apps/` directory can be written in C++.
 
