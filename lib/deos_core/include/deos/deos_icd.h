@@ -71,7 +71,7 @@ typedef enum {
     DEOS_NODE_TEXTUAL        = 0x01,
     DEOS_NODE_GROUND_CONTROL = 0x02,
     DEOS_NODE_MAIN_STM32     = 0x03,
-    DEOS_NODE_MICRO_ROS      = 0x04,
+    DEOS_NODE_ROS_BRIDGE     = 0x04,
 
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,

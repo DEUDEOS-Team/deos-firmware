@@ -141,13 +141,13 @@ void EthRosBridge::rx_thread() {
                 memcpy(msg.payload, rx_buf + 1 + header_sz, msg.payload_len);
             }
             
-            deos_feed_message(&msg, DEOS_TRANSPORT_ETH_UROS);
+            deos_feed_message(&msg, DEOS_TRANSPORT_ETH_ROS_BRIDGE);
         }
     }
 }
 
 int EthRosBridge::init() {
-    deos_router_register_transport(DEOS_TRANSPORT_ETH_UROS, tx_callback);
+    deos_router_register_transport(DEOS_TRANSPORT_ETH_ROS_BRIDGE, tx_callback);
 
     k_thread_create(&ros_bridge_tx_thread_data, ros_bridge_tx_stack,
                     K_KERNEL_STACK_SIZEOF(ros_bridge_tx_stack),

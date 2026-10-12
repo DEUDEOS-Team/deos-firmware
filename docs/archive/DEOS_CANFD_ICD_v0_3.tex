@@ -239,14 +239,14 @@ Node ID & Symbol & Çalıştığı Ortam & Görev \\
 \midrule
 \hex{01} & \code{DEOS\_NODE\_TEXTUAL} & Raspberry Pi / Textual & Operatör arayüzü; config, command, request/response, status ve log sink \\
 \hex{02} & \code{DEOS\_NODE\_GROUND\_CONTROL} & Uzak yer kontrol uygulaması & Yer kontrol haberleşme ucu \\
-\hex{04} & \code{DEOS\_NODE\_MICRO\_ROS} & Raspberry Pi / micro-ROS & ROS arayüzü, telemetry ve control entegrasyonu \\
+\hex{04} & \code{DEOS\_NODE\_ROS\_BRIDGE} & Raspberry Pi / ROS 2 & ROS 2 UDP Köprüsü (deos\_ros\_bridge) entegrasyonu \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
 Textual Node yalnızca konfigürasyon amacıyla kullanılan bir node değildir. Protokolün izin
 verdiği servislerde komut gönderebilir, cevap alabilir, durum bilgilerini işleyebilir ve
-log mesajlarının doğrudan hedefi olabilir. Benzer şekilde micro-ROS ve Ground Control
+log mesajlarının doğrudan hedefi olabilir. Benzer şekilde ROS 2 Bridge ve Ground Control
 Node'ları da ihtiyaç duydukları servisleri kaynak veya hedef olarak kullanabilir.
 
 \subsection{Physical Node Atamaları}
@@ -290,7 +290,7 @@ typedef enum
     DEOS_NODE_TEXTUAL        = 0x01,
     DEOS_NODE_GROUND_CONTROL = 0x02,
     DEOS_NODE_MAIN_STM32     = 0x03,
-    DEOS_NODE_MICRO_ROS      = 0x04,
+    DEOS_NODE_ROS_BRIDGE     = 0x04,
 
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
@@ -1406,7 +1406,7 @@ DEOS_MODE_...
 DEOS_NODE_TEXTUAL
 DEOS_NODE_GROUND_CONTROL
 DEOS_NODE_MAIN_STM32
-DEOS_NODE_MICRO_ROS
+DEOS_NODE_ROS_BRIDGE
 DEOS_NODE_STEERING
 DEOS_CLASS_CONFIG
 DEOS_SERVICE_STEERING

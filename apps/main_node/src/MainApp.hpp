@@ -5,10 +5,6 @@
 #include "io/SafetyManager.hpp"
 #include "network/NetworkMonitor.hpp"
 
-/* Aliases for ROS 2 Bridge */
-#define DEOS_NODE_ROS_BRIDGE          DEOS_NODE_MICRO_ROS
-#define DEOS_TRANSPORT_ETH_ROS_BRIDGE DEOS_TRANSPORT_ETH_UROS
-
 class MainApp {
 public:
     static MainApp& getInstance();
