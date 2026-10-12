@@ -81,7 +81,7 @@ DEOS Ethernet donanım hattı, üzerindeki tek fiziksel PHY/MAC üzerinden iki f
     \item \textbf{ROS 2 Köprü Arayüzü (UDP Port 5001):} Gömülü Linux otonom sürüş bilgisayarı üzerindeki \code{deos\_ros\_bridge} paketi ile çift yönlü, düşük gecikmeli, datagram tabanlı haberleşme.
 \end{enumerate}
 
-Ethernet bağlantısında fiziksel katman (L2) donanımsal 32-bit CRC (FCS) doğrulaması yaptığı ve L4 taşıma protokolleri (TCP/UDP) kendi dahili checksum mekanizmalarını barındırdığı için, LoRa tarafında kullanılan \code{0xAA55} MAGIC baytlarına ve yazılımsal CRC16 hesaplamalarına bu hatta \textbf{ihtiyaç duyulmaz}.
+Ethernet bağlantısında fiziksel katman (L2) donanımsal 32-bit CRC (FCS) doğrulaması yaptığı ve L4 taşıma protokolleri (TCP/UDP) kendi dahili checksum mekanizmalarını barındırdığı için, LoRa tarafında kullanılan yazılımsal CRC16 hesaplamalarına bu hatta \textbf{ihtiyaç duyulmaz}. Bununla birlikte, TCP akışındaki olası bayt kaymalarına karşı koruma sağlamak amacıyla TCP çerçevelerinin başında \code{0xAA 0x55} senkronizasyon baytları yer alır; mesaj tabanlı çalışan UDP tarafında ise ek bir magic bayta gerek duyulmaz.
 
 \section{Textual TCP Konsol Arayüzü (Port 5000)}
 
@@ -94,20 +94,21 @@ Ethernet bağlantısında fiziksel katman (L2) donanımsal 32-bit CRC (FCS) doğ
 \end{itemize}
 
 \subsection{TCP Çerçeve (Frame) Formatı}
-TCP veri akışının nerede başlayıp bittiğini bilmek (Stream Parsing) için her paketin başına sadece 1 baytlık \code{Length} bilgisi eklenir:
+TCP veri akışında çerçeve sınırlarını belirlemek ve akış kaymalarına karşı anında yeniden senkronize olabilmek (Stream Resynchronization) için her paketin başına 2 baytlık \code{0xAA 0x55} sihirli baytları (Magic Word) ve 1 baytlık \code{Length} bilgisi eklenir:
 
 \begin{table}[h]
 \centering
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|}
 \hline
-\textbf{Length (1 Bayt)} & \textbf{DEOS Common Header (8 Bayt)} & \textbf{DEOS Payload ($N$ Bayt)} \\
+\textbf{Magic Word (2 Bayt)} & \textbf{Length (1 Bayt)} & \textbf{DEOS Common Header (8 Bayt)} & \textbf{DEOS Payload ($N$ Bayt)} \\
 \hline
-\hex{08} - \hex{44} & Priority, Class, Service, Dest, Src, Ver, Seq, Cmd & Komut Verisi (Örn: Ping ID) \\
+\hex{AA} \hex{55} & \hex{08} - \hex{44} & Priority, Class, Service, Dest, Src, Ver, Seq, Cmd & Komut Verisi (Örn: Ping ID) \\
 \hline
 \end{tabular}
 \end{table}
 
 \begin{itemize}
+    \item \textbf{Magic Word (2 Byte):} Daima \hex{AA} \hex{55} değerindedir. Alıcı akıştan koparsa bir sonraki \hex{AA} \hex{55} desenini arayarak akışı anında kurtarır.
     \item \textbf{Length (1 Byte):} Kendisinden sonra gelen DEOS Header ve Payload alanlarının toplam bayt sayısıdır (\code{8 + payload\_len}).
     \item \textbf{DEOS Common Header (8 Byte):} Sırasıyla \code{priority}, \code{message\_class}, \code{service}, \code{destination}, \code{source}, \code{version}, \code{sequence}, \code{command}.
     \item \textbf{DEOS Payload ($N$ Byte):} Gönderilmeyen boş baytlar hatta basılmaz; yalnızca dolu olan $N$ bayt aktarılır.
@@ -192,8 +193,9 @@ header = struct.pack('<8B', 1, 1, 0, 0x03, 0x01, 0x11, 1, 0x01)
 payload = struct.pack('<I', 69) # Ping ID: 69
 msg = header + payload
 
+magic = bytes([0xAA, 0x55])
 length_byte = bytes([len(msg)]) # 12 Byte
-sock.sendall(length_byte + msg)
+sock.sendall(magic + length_byte + msg)
 \end{lstlisting}
 
 \subsection{C++ ROS 2 Bridge UDP İstemci (Port 5001)}

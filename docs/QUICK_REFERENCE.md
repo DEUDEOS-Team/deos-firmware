@@ -65,7 +65,7 @@ Bu doküman; **Firmware (STM32)**, **Otonom Sürüş (ROS 2)**, **Yer Kontrol İ
 | Ortam | Protokol / Fiziksel | Port / Parametre | Çerçeveleme (Framing) Kuralı |
 |---|---|---|---|
 | **ROS 2 Köprüsü** | Ethernet UDP (`SOCK_DGRAM`) | `192.168.1.10:5001` | `[1B Length] [8B Header] [N Bayt Payload]`<br>*(Dinamik Client Discovery; ek CRC yok)* |
-| **Textual Konsol** | Ethernet TCP (`SOCK_STREAM`) | `192.168.1.10:5000` | `[1B Length] [8B Header] [N Bayt Payload]`<br>*(TCP akış kontrolü; ek CRC yok)* |
+| **Textual Konsol** | Ethernet TCP (`SOCK_STREAM`) | `192.168.1.10:5000` | `[0xAA 0x55] [1B Length] [8B Header] [N Bayt Payload]`<br>*(TCP akış senkronizasyonu; ek CRC yok)* |
 | **Yer Kontrolü** | LoRa / UART Seri Port | 115200 Baud, Kanal 23, 2.4 kbps | `[0xAA 0x55] [Flag] [Length] [Payload] [CRC16]`<br>*(Donanımsal kesme & semafor, Zero-Latency)* |
 | **Araç İçi Omurga** | CAN-FD Fiziksel Katman | 1 Mbps Nominal / 5 Mbps Data (BRS) | 29-bit Extended CAN ID + DLC Padding (Little-Endian) |
 

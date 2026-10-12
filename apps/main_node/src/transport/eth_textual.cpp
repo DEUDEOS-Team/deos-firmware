@@ -10,6 +10,8 @@ LOG_MODULE_REGISTER(eth_textual, LOG_LEVEL_INF);
 #define TEXTUAL_THREAD_STACK_SIZE 2048
 #define TEXTUAL_THREAD_PRIO 5
 #define TEXTUAL_TCP_PORT 5000
+#define TEXTUAL_MAGIC_1  0xAA
+#define TEXTUAL_MAGIC_2  0x55
 
 /* Global threads and stacks since we cannot easily put them in the class without exposing Kconfig macros */
 static K_KERNEL_STACK_DEFINE(textual_server_stack, TEXTUAL_THREAD_STACK_SIZE);
@@ -59,13 +61,15 @@ void EthTextual::tx_thread() {
                 uint8_t len = header_sz + msg.payload_len;
                 
                 uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
-                tx_buf[0] = len;
-                memcpy(&tx_buf[1], &msg, header_sz);
+                tx_buf[0] = TEXTUAL_MAGIC_1;
+                tx_buf[1] = TEXTUAL_MAGIC_2;
+                tx_buf[2] = len;
+                memcpy(&tx_buf[3], &msg, header_sz);
                 if (msg.payload_len > 0) {
-                    memcpy(&tx_buf[1 + header_sz], msg.payload, msg.payload_len);
+                    memcpy(&tx_buf[3 + header_sz], msg.payload, msg.payload_len);
                 }
 
-                int sent = zsock_send(m_active_client_sock, tx_buf, len + 1, 0);
+                int sent = zsock_send(m_active_client_sock, tx_buf, 3 + len, 0);
                 if (sent < 0) {
                     LOG_ERR("TCP Send failed (%d), dropping client", errno);
                     zsock_close(m_active_client_sock);
@@ -125,48 +129,86 @@ void EthTextual::server_thread() {
         LOG_INF("Textual UI Connected!");
         m_active_client_sock = client;
 
+        typedef enum {
+            STATE_WAIT_MAGIC_1,
+            STATE_WAIT_MAGIC_2,
+            STATE_WAIT_LEN
+        } tcp_rx_state_t;
+
+        tcp_rx_state_t rx_state = STATE_WAIT_MAGIC_1;
+        uint8_t rx_len = 0;
+
         while (1) {
-            uint8_t rx_len;
-            int ret = zsock_recv(client, &rx_len, 1, 0);
+            uint8_t byte_in;
+            int ret = zsock_recv(client, &byte_in, 1, 0);
             if (ret <= 0) {
                 LOG_INF("Textual UI Disconnected.");
                 break;
             }
 
-            if (rx_len == 0 || rx_len > sizeof(deos_message_t)) {
-                LOG_WRN("Invalid frame length %d received, closing connection.", rx_len);
-                break;
-            }
-
-            uint8_t frame_buf[sizeof(deos_message_t)];
-            int received = 0;
-            
-            while (received < rx_len) {
-                ret = zsock_recv(client, frame_buf + received, rx_len - received, 0);
-                if (ret <= 0) break;
-                received += ret;
-            }
-
-            if (received != rx_len) {
-                LOG_WRN("Incomplete frame received.");
-                break;
-            }
-
-            size_t header_sz = offsetof(deos_message_t, payload);
-            if (rx_len >= header_sz) {
-                deos_message_t msg;
-                memset(&msg, 0, sizeof(msg));
-                memcpy(&msg, frame_buf, header_sz);
-                msg.payload_len = rx_len - header_sz;
-                
-                if (msg.payload_len > 0) {
-                    memcpy(msg.payload, frame_buf + header_sz, msg.payload_len);
+            switch (rx_state) {
+            case STATE_WAIT_MAGIC_1:
+                if (byte_in == TEXTUAL_MAGIC_1) {
+                    rx_state = STATE_WAIT_MAGIC_2;
                 }
-                
-                deos_feed_message(&msg, DEOS_TRANSPORT_ETH_TEXTUAL);
+                break;
+
+            case STATE_WAIT_MAGIC_2:
+                if (byte_in == TEXTUAL_MAGIC_2) {
+                    rx_state = STATE_WAIT_LEN;
+                } else if (byte_in != TEXTUAL_MAGIC_1) {
+                    rx_state = STATE_WAIT_MAGIC_1;
+                }
+                break;
+
+            case STATE_WAIT_LEN: {
+                rx_len = byte_in;
+                size_t header_sz = offsetof(deos_message_t, payload);
+
+                if (rx_len < header_sz || rx_len > sizeof(deos_message_t)) {
+                    LOG_WRN("Invalid frame length %d received after magic word.", rx_len);
+                    rx_state = STATE_WAIT_MAGIC_1;
+                    break;
+                }
+
+                uint8_t frame_buf[sizeof(deos_message_t)];
+                int received = 0;
+                bool client_err = false;
+
+                while (received < rx_len) {
+                    ret = zsock_recv(client, frame_buf + received, rx_len - received, 0);
+                    if (ret <= 0) {
+                        client_err = true;
+                        break;
+                    }
+                    received += ret;
+                }
+
+                if (client_err) {
+                    LOG_INF("Textual UI Disconnected during payload read.");
+                    goto client_cleanup;
+                }
+
+                if (received == rx_len) {
+                    deos_message_t msg;
+                    memset(&msg, 0, sizeof(msg));
+                    memcpy(&msg, frame_buf, header_sz);
+                    msg.payload_len = rx_len - header_sz;
+
+                    if (msg.payload_len > 0) {
+                        memcpy(msg.payload, frame_buf + header_sz, msg.payload_len);
+                    }
+
+                    deos_feed_message(&msg, DEOS_TRANSPORT_ETH_TEXTUAL);
+                }
+
+                rx_state = STATE_WAIT_MAGIC_1;
+                break;
+            }
             }
         }
 
+client_cleanup:
         zsock_close(client);
         m_active_client_sock = -1;
     }
