@@ -32,8 +32,8 @@ Yeni geliştiricilerin ve sistem entegratörlerinin şartnameyi aşağıdaki sı
                  │
 [Seviye 2: Taşıma Katmanları (Transport)]
        ├── DOC-ICD-TRP-CANFD-005 : CAN-FD Taşıma Katmanı (29-bit CAN ID, BRS, DLC)
-       ├── DOC-ICD-TRP-TCP-006   : Ethernet / TCP Taşıma Katmanı (Akış Çerçeveleme)
-       └── DOC-ICD-TRP-LORA-007  : LoRa Telemetri Katmanı (Hava Çerçeveleme, ACK/Retry)
+       ├── DOC-ICD-TRP-ETH-006   : Ethernet Taşıma Katmanı (TCP Port 5000 & UDP Port 5001)
+       └── DOC-ICD-TRP-LORA-007  : LoRa Taşıma Katmanı (Hava Çerçeveleme, ACK/Retry)
                  │
 [Seviye 3: Sistem Çapında Servisler]
        ├── DOC-ICD-NET-003 : Ağ Yönetimi (SYSTEM Servisi, PING/PONG, Heartbeat)
@@ -56,8 +56,8 @@ Yeni geliştiricilerin ve sistem entegratörlerinin şartnameyi aşağıdaki sı
 | **`DOC-ICD-NET-003`** | [ICD_Network_Management.pdf](ICD_Network_Management.pdf) | SYSTEM servisi (`0x00`), PING/PONG mesajlaşması, canlılık takibi (Heartbeat) ve düğüm tanıma. |
 | **`DOC-ICD-DIAG-004`** | [ICD_Fault_Management.pdf](ICD_Fault_Management.pdf) | DIAGNOSTIC servisi (`0x07`), DTC hata kodlama yapısı, arıza seviyeleri (`WARNING`, `CRITICAL`, `FATAL`). |
 | **`DOC-ICD-TRP-CANFD-005`** | [ICD_CANFD_Transport.pdf](ICD_CANFD_Transport.pdf) | CAN-FD fiziksel katmanı, 29-bit Extended ID bit yerleşimi, baud rate kuralları, DLC padding kuralları. |
-| **`DOC-ICD-TRP-ETH-006`** | [ICD_Ethernet_TCP.pdf](ICD_Ethernet_TCP.pdf) | Ethernet (TCP \& UDP) Taşıma Katmanı: Textual UI (TCP Port 5000) ve ROS 2 Bridge (UDP Port 5001) çerçeveleme, dinamik istemci keşfi ve paket anatomisi. |
-| **`DOC-ICD-TRP-LORA-007`** | [ICD_LoRa_Telemetry.pdf](ICD_LoRa_Telemetry.pdf) | Yer kontrol telemetrisi için LoRa/UART senkronizasyon çerçevesi (`0xAA55`), hava süresi optimizasyonu, ACK/Retry protokolü. |
+| **`DOC-ICD-TRP-ETH-006`** | [ICD_Ethernet_Transport.pdf](ICD_Ethernet_Transport.pdf) | Ethernet (TCP \& UDP) Taşıma Katmanı: Textual UI (TCP Port 5000) ve ROS 2 Bridge (UDP Port 5001) çerçeveleme, dinamik istemci keşfi ve paket anatomisi. |
+| **`DOC-ICD-TRP-LORA-007`** | [ICD_LoRa_Transport.pdf](ICD_LoRa_Transport.pdf) | LoRa Taşıma Katmanı: Yer kontrol telemetrisi için LoRa/UART senkronizasyon çerçevesi (`0xAA55`), hava süresi optimizasyonu, ACK/Retry protokolü. |
 | **`DOC-ICD-NODE-TRAC-008`** | [ICD_Traction.pdf](ICD_Traction.pdf) | Çekiş kontrol düğümü (`0x10`) ve servisi (`0x01`): Tork talebi, hız geri bildirimi, motor sürücü telemetrisi. |
 | **`DOC-ICD-NODE-STR-009`** | [ICD_Steering.pdf](ICD_Steering.pdf) | Direksiyon kontrol düğümü (`0x11`) ve servisi (`0x02`): Hedef açı, mevcut açı, tork sınırlama, kalibrasyon. |
 | **`DOC-ICD-NODE-BRK-010`** | [ICD_Brake.pdf](ICD_Brake.pdf) | Elektronik frenleme düğümü (`0x12`) ve servisi (`0x03`): Fren basıncı, acil frenleme (EBS), aktüatör durumu. |
