@@ -4,6 +4,8 @@ Bu dizin, **DEOS (Dokuz Eylül Otonom Sistemler)** araç içi ve araç dışı d
 
 Protokolün monolitik ilk sürümü arşivlenmiş (`docs/DEOS_CANFD_ICD_v0_3.tex`), tüm sistem **medya bağımsız çekirdek**, **taşıma katmanları**, **sistem servisleri** ve **alt sistem düğümleri** olmak üzere 12 bağımsız modüler dokümana ayrılmıştır.
 
+> **Hızlı Referans Kartı (Cheat Sheet):** Tüm Node ID, Service ID, portlar ve mühendislik birim ölçekleme katsayılarının tek sayfalık pratik mühendislik özeti için [`docs/QUICK_REFERENCE.md`](../QUICK_REFERENCE.md) dokümanını inceleyebilirsiniz.
+
 ---
 
 ## 1. Genel Metaveri & Versiyonlama
