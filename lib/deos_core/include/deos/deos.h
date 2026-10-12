@@ -35,14 +35,9 @@ int deos_start(void);
  * @param payload_len Length of the payload (max 60 bytes).
  * @return 0 on success, negative error code on failure.
  */
-int deos_send(
-    deos_node_id_t destination,
-    deos_priority_t priority,
-    deos_message_class_t message_class,
-    deos_service_id_t service,
-    uint8_t command,
-    const void *payload,
-    size_t payload_len);
+int deos_send(deos_node_id_t destination, deos_priority_t priority,
+              deos_message_class_t message_class, deos_service_id_t service,
+              uint8_t command, const void *payload, size_t payload_len);
 
 /**
  * @brief Send a PING message.
@@ -51,9 +46,7 @@ int deos_send(
  * @param ping_id 32-bit correlation ID.
  * @return 0 on success, negative error code on failure.
  */
-int deos_send_ping(
-    deos_node_id_t destination,
-    uint32_t ping_id);
+int deos_send_ping(deos_node_id_t destination, uint32_t ping_id);
 
 /**
  * @brief Register an application message handler.
@@ -65,12 +58,9 @@ int deos_send_ping(
  * @param user_data User data passed to the callback.
  * @return 0 on success, negative error code on failure.
  */
-int deos_register_handler(
-    deos_message_class_t message_class,
-    deos_service_id_t service,
-    uint8_t command,
-    deos_message_handler_t handler,
-    void *user_data);
+int deos_register_handler(deos_message_class_t message_class,
+                          deos_service_id_t service, uint8_t command,
+                          deos_message_handler_t handler, void *user_data);
 
 /**
  * @brief Register an additional local logical node.
@@ -81,26 +71,20 @@ int deos_register_local_node(deos_node_id_t node_id);
 /**
  * @brief Register a handler for a specific local node.
  */
-int deos_register_handler_for_node(
-    deos_node_id_t local_node,
-    deos_message_class_t message_class,
-    deos_service_id_t service,
-    uint8_t command,
-    deos_message_handler_t handler,
-    void *user_data);
+int deos_register_handler_for_node(deos_node_id_t local_node,
+                                   deos_message_class_t message_class,
+                                   deos_service_id_t service, uint8_t command,
+                                   deos_message_handler_t handler,
+                                   void *user_data);
 
 /**
  * @brief Send a DEOS message from a specific local node.
  */
-int deos_send_from_node(
-    deos_node_id_t source_node,
-    deos_node_id_t destination,
-    deos_priority_t priority,
-    deos_message_class_t message_class,
-    deos_service_id_t service,
-    uint8_t command,
-    const void *payload,
-    size_t payload_len);
+int deos_send_from_node(deos_node_id_t source_node, deos_node_id_t destination,
+                        deos_priority_t priority,
+                        deos_message_class_t message_class,
+                        deos_service_id_t service, uint8_t command,
+                        const void *payload, size_t payload_len);
 
 /**
  * @brief Send a HEARTBEAT message.
@@ -115,7 +99,8 @@ int deos_send_heartbeat(deos_state_t current_state);
  * @param source_node The local node ID sending the heartbeat.
  * @return 0 on success, negative error code on failure.
  */
-int deos_send_heartbeat_from_node(deos_node_id_t source_node, deos_state_t current_state);
+int deos_send_heartbeat_from_node(deos_node_id_t source_node,
+                                  deos_state_t current_state);
 
 /**
  * @brief Send a generic DEOS response.
@@ -126,11 +111,8 @@ int deos_send_heartbeat_from_node(deos_node_id_t source_node, deos_state_t curre
  * @param data_len Length of the optional data.
  * @return 0 on success, negative error code on failure.
  */
-int deos_send_response(
-    const deos_message_t *original,
-    deos_result_t result,
-    const void *data,
-    uint8_t data_len);
+int deos_send_response(const deos_message_t *original, deos_result_t result,
+                       const void *data, uint8_t data_len);
 
 /**
  * @brief Transport TX function pointer type.
@@ -144,7 +126,8 @@ typedef int (*deos_transport_tx_fn_t)(const deos_message_t *msg);
  * @param tx_fn The transmit function for this transport.
  * @return 0 on success.
  */
-int deos_router_register_transport(deos_transport_t transport, deos_transport_tx_fn_t tx_fn);
+int deos_router_register_transport(deos_transport_t transport,
+                                   deos_transport_tx_fn_t tx_fn);
 
 /**
  * @brief Lookup function pointer type for dynamic routing.
@@ -159,7 +142,8 @@ typedef deos_transport_t (*deos_router_lookup_fn_t)(deos_node_id_t destination);
 void deos_router_set_lookup_fn(deos_router_lookup_fn_t lookup_fn);
 
 /**
- * @brief Feed an incoming message from a transport into the DEOS core dispatcher.
+ * @brief Feed an incoming message from a transport into the DEOS core
+ dispatcher.
 
  *
  * @param msg The received message.

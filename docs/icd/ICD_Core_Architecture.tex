@@ -45,52 +45,57 @@
 \newcommand{\hex}[1]{\texttt{0x#1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{DEOS Core Architecture \& Protocol Rules}\\
-\large Sürüm 0.3}
+\title{\textbf{DEOS Core Protocol Architecture}\\
+\large Sürüm 1.1 -- Medya Bağımsız Çekirdek Protokol}
 \author{DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{}
+\date{12 Ekim 2026}
 
 \begin{document}
 \maketitle
 
 \begin{center}
 \begin{tabular}{ll}
-\textbf{Doküman tipi:} & Interface Control Document (ICD) \\
+\textbf{Doküman tipi:} & Core Protocol Specification \& Architecture ICD \\
 \textbf{Protokol sürümü:} & v1.1 (\hex{11}) \\
-\textbf{Taşıma altyapısı:} & CAN-FD ana omurga \\
-\textbf{Durum:} & ICD Sürüm 0.3 -- v1.1 wire-format revizyonu \\
+\textbf{Taşıma altyapısı:} & Medya Bağımsız (CAN-FD, Ethernet, LoRa, ROS 2) \\
+\textbf{Durum:} & ICD Sürüm 1.1 \\
 \end{tabular}
 \end{center}
 
 
 \section{Amaç ve Kapsam}
 
-Bu doküman, DEOS araç içi CAN-FD haberleşme hattında kullanılan ortak adresleme,
-29-bit Extended CAN Identifier yapısı, mesaj sınıfları, servisler, komut namespace'leri,
-ortak veri alanı, veri tipleri ve temel mesaj formatlarını tanımlar.
+Bu doküman, Dokuz Eylül Otonom Sistemler (DEOS) dağıtık araç sisteminde kullanılan \textbf{medya bağımsız çekirdek protokolü} tanımlar.
 
-Dokümanın kapsamı CAN hattında gözlenebilen protokol davranışlarıdır. Node ID, Priority,
-Message Class, Service, Source, Destination, Command, Protocol Version, Sequence, Length ve
-Command Payload alanlarının wire-format karşılıkları normatif olarak tanımlanır.
+DEOS protokolü yalnızca belirli bir donanıma (CAN-FD vb.) bağlı bir hat protokolü değildir; araç kontrol bilgisayarları (STM32), telemetri birimleri (LoRa), gömülü Linux / Raspberry Pi sistemleri (Ethernet TCP/UDP) ve otonom sürüş yazılımları (ROS 2) arasında ortak çalışan üst düzey bir uygulama ve taşıma mimarisidir.
 
-Gömülü yazılım mimarisi ve CAN-FD hattı dışındaki taşıma ortamlarının çalışma ayrıntıları
-bu ICD'nin kapsamı dışındadır.
+Bu dokümanda:
+\begin{itemize}
+    \item Mantıksal Düğüm Adresleme (Node Address Registry),
+    \item Evrensel Mesaj Öncelik Mimarisi (Priority Registry),
+    \item Mesaj Davranış Sınıfları (Message Class Registry),
+    \item Fonksiyonel Servisler (Service Registry ve Node--Service İlişkisi),
+    \item Medya Bağımsız Evrensel Taşıma Çerçevesi (Universal DEOS Transport Frame),
+    \item İstek--Cevap (Request--Response) ve Konfigürasyon semantiği
+\end{itemize}
+tanımlanmaktadır.
 
-Bir Node ID fiziksel bir mikrodenetleyiciye birebir bağlı olmak zorunda değildir. Aynı
-fiziksel cihaz üzerinde birden fazla mantıksal DEOS Node ID bulunabilir; ancak CAN hattında
-her Node ID bağımsız bir protokol kimliği olarak değerlendirilir.
+Fiziksel taşıma ortamlarına özel donanımsal kodlama ve çerçeveleme ayrıntıları (CAN-FD için 29-bit CAN ID ve DLC yuvarlama, LoRa için UART senkronizasyonu ve CRC, Ethernet için TCP akış çerçeveleme) ilgili \textbf{Taşıma Adaptörü (Transport Adapter)} dokümanlarında tanımlanmıştır.
+
+Bir Node ID fiziksel bir mikrodenetleyiciye birebir bağlı olmak zorunda değildir. Aynı fiziksel cihaz üzerinde birden fazla mantıksal DEOS Node ID bulunabilir; her Node ID sistemde bağımsız bir mantıksal protokol kimliğidir.
 
 \section{Namespace Hiyerarşisi}
 
-DEOS protokolünde bir mesajın kimliği tek bir ``mesaj numarası'' ile değil, birden fazla
-alanın birleşimiyle belirlenir:
+DEOS protokolünde bir mesajın kimliği tek bir ``mesaj numarası'' ile değil, katmanlı bir namespace bileşimiyle belirlenir:
 
 \begin{verbatim}
-DEOS_CAN_PROTOCOL
+DEOS_PROTOCOL
 |
 +-- NODE
 |   +-- SOURCE_NODE
 |   +-- DESTINATION_NODE
+|
++-- PRIORITY
 |
 +-- MESSAGE_CLASS
 |
@@ -102,8 +107,8 @@ DEOS_CAN_PROTOCOL
 |
 +-- PROTOCOL_METADATA
     +-- VERSION
-    +-- SEQUENCE_RESERVED
-    +-- LENGTH
+    +-- SEQUENCE
+    +-- PAYLOAD_LENGTH
 \end{verbatim}
 
 Buna göre bir mesajın semantik kimliği genel olarak şu bileşenlerden oluşur:
@@ -114,78 +119,30 @@ Buna göre bir mesajın semantik kimliği genel olarak şu bileşenlerden oluşu
 
 Parametre yönetimi yapılan mesajlarda buna ek olarak \code{Parameter ID} kullanılır.
 
-\section{CAN-FD Extended Identifier Yapısı}
+\section{Mesaj Öncelik Mimarisi (Priority Registry)}
 
-DEOS protokolü 29-bit Extended CAN Identifier kullanır. Identifier alanı aşağıdaki
-şekilde bölünür:
+DEOS çekirdeğinde (\code{deos\_core}) ve tüm taşıma çerçevelerinde Öncelik (\code{Priority}) alanı \textbf{1 Byte (\code{uint8\_t})} olarak tanımlanır ve taşınır. Protokol standardı olarak bu 1 baytlık alan \hex{00} ile \hex{07} (0 -- 7) arasındaki değerleri alır.
 
-\begin{center}
-\begin{tabular}{c c c c c}
-\toprule
-Bitler & Alan & Uzunluk & Açıklama \\
-\midrule
-28--26 & Priority & 3 bit & Arbitration önceliği \\
-25--22 & Message Class & 4 bit & Mesaj davranış sınıfı \\
-21--16 & Service ID & 6 bit & Fonksiyonel servis alanı \\
-15--8  & Destination Node & 8 bit & Hedef düğüm adresi \\
-7--0   & Source Node & 8 bit & Kaynak düğüm adresi \\
-\bottomrule
-\end{tabular}
-\end{center}
+Öncelik değeri; gerek donanımsal bus arbitration (CAN-FD'ye aktarılırken 29-bit ID'nin 3 bitlik alanına haritalanır) gerekse yazılımsal kuyruk (Message Queue, LoRa TX, Router) seviyesinde mesajın öncelik sırasını belirler.
 
-Toplam uzunluk:
-
-\[
-3 + 4 + 6 + 8 + 8 = 29 \text{ bit}
-\]
-
-Identifier sayısal olarak aşağıdaki bağıntı ile ifade edilir:
-
-\[
-\text{CAN\_ID} =
-(P \ll 26)
-\;|\;
-(C \ll 22)
-\;|\;
-(S \ll 16)
-\;|\;
-(D \ll 8)
-\;|\;
-SRC
-\]
-
-Burada:
-\begin{itemize}
-    \item \(P\): Priority,
-    \item \(C\): Message Class,
-    \item \(S\): Service ID,
-    \item \(D\): Destination Node,
-    \item \(SRC\): Source Node değeridir.
-\end{itemize}
-
-CAN arbitration mantığı nedeniyle sayısal olarak daha düşük identifier daha yüksek
-önceliğe sahiptir. Bu nedenle Priority alanında düşük sayısal değer daha yüksek önceliği
-temsil eder.
-
-\subsection{Önerilen Priority Registry}
+Sayısal olarak daha küçük olan değer her zaman daha yüksek önceliği temsil eder:
 
 \begin{center}
 \begin{tabularx}{\textwidth}{c l X}
 \toprule
 Değer & Symbol & Kullanım \\
 \midrule
-0 & \code{DEOS\_PRIO\_EMERGENCY} & Acil durdurma ve en kritik safety mesajları \\
+0 & \code{DEOS\_PRIO\_EMERGENCY} & Acil durdurma ve en kritik safety mesajları (E-Stop) \\
 1 & \code{DEOS\_PRIO\_CRITICAL\_CONTROL} & Kritik gerçek zamanlı kontrol \\
 2 & \code{DEOS\_PRIO\_CONTROL} & Normal sürüş kontrol mesajları \\
 3 & \code{DEOS\_PRIO\_STATUS} & Durum ve geri besleme mesajları \\
 4 & \code{DEOS\_PRIO\_CONFIG} & Konfigürasyon ve kalibrasyon \\
-5 & \code{DEOS\_PRIO\_NETWORK} & Network management / heartbeat \\
+5 & \code{DEOS\_PRIO\_NETWORK} & Network management / heartbeat / ping-pong \\
 6 & \code{DEOS\_PRIO\_LOW} & Düşük öncelikli servis trafiği \\
 7 & \code{DEOS\_PRIO\_BACKGROUND} & Arka plan / geliştirme trafiği \\
 \bottomrule
 \end{tabularx}
 \end{center}
-
 
 \section{Node Address Registry}
 
@@ -249,7 +206,6 @@ Node ID & Symbol & Fiziksel Cihaz & Görev \\
 \hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik sistemi kontrolü \\
 \hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon sistemi kontrolü \\
 \hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Fren sistemi kontrolü \\
-\hex{14} & \code{DEOS\_NODE\_LIGHTING} & STM32 / Aydınlatma ECU & Aydınlatma ve sinyalizasyon kontrolü \\
 \hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & DALY BMS \#1 & Ana batarya BMS \\
 \hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & DALY BMS \#2 & Yardımcı batarya BMS \\
 \hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway & Classic CAN--CAN-FD çevirici \\
@@ -286,7 +242,6 @@ typedef enum
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
     DEOS_NODE_BRAKE          = 0x12,
-    DEOS_NODE_LIGHTING       = 0x14,
 
     DEOS_NODE_BMS_MAIN       = 0x20,
     DEOS_NODE_BMS_AUX        = 0x21,
@@ -439,7 +394,6 @@ MICRO\_ROS & X & -- & -- & -- & -- & -- & X & -- \\
 TRACTION & X & X & -- & -- & -- & X & X & -- \\
 STEERING & X & -- & X & -- & -- & X & X & -- \\
 BRAKE & X & -- & -- & X & -- & X & X & -- \\
-LIGHTING & X & -- & -- & -- & -- & -- & X & X \\
 BMS\_MAIN & X & -- & -- & -- & X & -- & X & -- \\
 BMS\_AUX & X & -- & -- & -- & X & -- & X & -- \\
 BMS\_GATEWAY & X & -- & -- & -- & X & -- & X & -- \\
@@ -458,32 +412,74 @@ kullanılır. Aynı fiziksel düğüme kalibrasyon komutu gönderilirken
 \code{Destination = DEOS\_NODE\_STEERING}, \code{Service = DEOS\_SERVICE\_CALIBRATION}
 kullanılır.
 
-\section{CAN-FD DLC, Payload Uzunluğu ve BRS}
+\section{Çoklu Taşıma Katmanı Mimarisi (Multi-Transport Architecture)}
 
-CAN-FD DLC alanı, frame'in fiziksel CAN-FD data field boyutunu belirtir. DEOS v1.1
-Length alanı ise yalnızca geçerli command-specific payload byte sayısını belirtir. Bu iki
-alan aynı anlamda değildir.
+DEOS protokolü, alt taşıma katmanından tamamen soyutlanmış (transport-agnostic) olarak çalışır. Protokol çekirdeği (Core Dispatcher / Router), mesajları medya bağımsız mantıksal formatta (\code{deos\_message\_t} / \code{Universal DEOS Transport Frame}) işler ve hedef düğümün adresine göre ilgili fiziksel taşıma adaptörüne yönlendirir.
 
-8 byte üzerindeki CAN-FD data alanları 12, 16, 20, 24, 32, 48 veya 64 byte fiziksel
-boyutlara yuvarlanabilir. Bu nedenle DEOS Length değeri fiziksel CAN-FD data field
-boyutundan bağımsız olarak taşınır.
+Sistemde tanımlı fiziksel taşıma adaptörleri ve ilgili ICD dokümanları şunlardır:
 
-Örnek olarak 10 byte command payload için:
+\begin{enumerate}
+    \item \textbf{CAN-FD Taşıma Adaptörü (\code{ICD\_CANFD\_Transport}):}
+    Araç içi omurga haberleşmesidir. Çekirdek protokol alanları (Priority, Class, Service, Destination, Source) 29-bit Extended CAN Identifier alanına kodlanır. BRS (Bit Rate Switch) ve DLC yuvarlama kuralları bu adaptör tarafından yürütülür.
+    
+    \item \textbf{Ethernet TCP/UDP Adaptörü (\code{ICD\_Ethernet\_TCP}):}
+    Raspberry Pi, telemetri bilgisayarı ve teşhis araçları ile yüksek bant genişlikli IP iletişimidir. Akış ayrıştırması (stream parsing) için 1 baytlık çerçeve uzunluğu (\code{Length}) öneki kullanılır.
+    
+    \item \textbf{LoRa UART Telemetri Adaptörü (\code{ICD\_LoRa\_Telemetry}):}
+    Yer Kontrol İstasyonu ile araç arasındaki uzun mesafe kablosuz haberleşmedir. Gürültülü açık kanal nedeniyle senkronizasyon başlığı (\code{0xAA 0x55}), paket bayrakları (\code{Flag}) ve \code{CRC16-CCITT} koruma zarfı içerir.
+    
+    \item \textbf{ROS 2 UDP Köprüsü:}
+    Otonom sürüş yazılım katmanı (Navigasyon, Algılama) ile araç kontrol düğümleri arasında çift yönlü durum ve hedef aktarımı sağlar.
+\end{enumerate}
 
-\begin{verbatim}
-DEOS common header  = 4 byte
-Command payload     = 10 byte
-Semantic data size  = 14 byte
-CAN-FD data size    = 16 byte
-Padding             = 2 byte
-\end{verbatim}
+\section{Medya Bağımsız Standart DEOS Taşıma Çerçevesi (Universal Transport Frame)}
 
-DLC yuvarlaması nedeniyle semantic data sonrasında kalan kullanılmayan byte'lar \hex{00}
-olarak gönderilir ve alıcı tarafından payload'ın parçası olarak değerlendirilmez.
+DEOS protokolü, CAN-FD donanımının 29-bit Arbitration ID ve bit paketleme kısıtlarından bağımsız olarak; Ethernet (TCP/UDP), LoRa (UART), ROS 2 köprüleri ve Yer Kontrol İstasyonu (Python) gibi tüm harici sistemlerle uçtan uca haberleşebilmek için standart bir \textbf{Evrensel Taşıma Çerçevesi (Universal DEOS Transport Frame)} tanımlar.
 
-DEOS CAN-FD frame'leri 29-bit Extended Identifier, CAN-FD formatı ve Bit Rate Switching
-(BRS) kullanır. Nominal/arbitration bitrate ile data-phase bitrate değerleri deployment
-parametreleridir ve bu ICD revizyonunda sabitlenmemiştir.
+Dış ortamdan üretilen bir mesaj, CAN ID hesaplamasına veya donanımsal bit kaydırmalarına gerek kalmaksızın doğrudan bu standart dizilim ile paketlenir. Mesaj STM32 Ana Beyin (Router) katmanına ulaştığında, hedef CAN düğümüyse otomatik olarak 29-bit CAN ID ve CAN-FD verisine dönüştürülür.
+
+\subsection{Standart Çerçeve Anatomisi (Byte Byte)}
+
+Evrensel çerçeve, \textbf{9 Byte Sabit Başlık (Header)} ve ardından gelen $N$ Byte \textbf{Payload} alanından oluşur:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+\textbf{Byte} & \textbf{Alan Adı} & \textbf{Tip} & \textbf{Boyut} & \textbf{Açıklama} \\
+\midrule
+\textbf{0} & \code{Destination Node} & \code{uint8\_t} & 1 Byte & Hedef düğüm kimliği (Örn: \hex{03} Main STM32, \hex{10} Traction, \hex{FF} Broadcast). \\
+\textbf{1} & \code{Source Node} & \code{uint8\_t} & 1 Byte & Kaynak düğüm kimliği (Örn: \hex{02} Ground Control, \hex{06} Textual UI). \\
+\textbf{2} & \code{Priority} & \code{uint8\_t} & 1 Byte & Mesaj önceliği (\hex{00} CRITICAL .. \hex{05} NETWORK). \\
+\textbf{3} & \code{Version} & \code{uint8\_t} & 1 Byte & DEOS protokol sürümü (Varsayılan: \hex{11} = v1.1). \\
+\textbf{4} & \code{Message Class} & \code{uint8\_t} & 1 Byte & Mesaj sınıfı (\hex{01} COMMAND, \hex{02} RESPONSE, \hex{07} NETWORK vb.). \\
+\textbf{5} & \code{Service ID} & \code{uint8\_t} & 1 Byte & Fonksiyonel servis (\hex{00} SYSTEM, \hex{01} TRACTION, \hex{08} LIGHTING vb.). \\
+\textbf{6} & \code{Command ID} & \code{uint8\_t} & 1 Byte & Servise ait komut (\hex{01} TURN\_ON, \hex{02} TURN\_OFF, \hex{08} PING vb.). \\
+\textbf{7} & \code{Sequence} & \code{uint8\_t} & 1 Byte & Mesaj takip sayacı (\hex{00} -- \hex{FF}). \\
+\textbf{8} & \code{Payload Length} & \code{uint8\_t} & 1 Byte & Arkadan gelen dinamik veri bayt sayısı ($N$, 0--60 byte). \\
+\midrule
+\textbf{9..} & \textbf{Payload} & \code{uint8\_t[$N$]} & $N$ Byte & Gerçek komut/telemetri verisi (Örn: Far ID, Ping ID, Hız hedefi). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Toplam Paket Boyutu:} $9 + N$ Byte.
+
+\subsection{CAN-FD Dönüşüm Mekanizması}
+
+Bu çerçeve STM32 Gateway/Router düğümüne ulaştığında:
+\begin{enumerate}
+    \item \textbf{29-bit CAN ID:} Byte 0 (\code{Destination}), Byte 1 (\code{Source}), Byte 2 (\code{Priority}), Byte 4 (\code{Message Class}) ve Byte 5 (\code{Service}) alanları sürücü tarafından otomatik olarak 29-bit Extended CAN Identifier'a dönüştürülür.
+    \item \textbf{CAN-FD Data Payload:} Byte 3 (\code{Version}), Byte 7 (\code{Sequence}), Byte 6 (\code{Command}), Byte 8 (\code{Payload Length}) ve ardından gelen \code{Payload} alanları doğrudan CAN-FD frame'inin veri alanına yazılır.
+\end{enumerate}
+
+\subsection{Fiziksel İletim Katmanlarına Göre Dış Zarf (L2 Framing)}
+
+Evrensel 9+N baytlık standart DEOS çerçevesi, fiziksel iletim hattının özelliklerine göre dış zarflarla taşınır:
+\begin{itemize}
+    \item \textbf{Ethernet (TCP):} TCP zaten akış kontrolü ve sağlama toplamı sağladığından, çerçevenin başına sadece toplam paket boyutu eklenir: \code{[Length (1B)] + [Standart DEOS Frame (9+N Byte)]}.
+    \item \textbf{LoRa / Seri Port (UART):} Gürültülü ve bayt kayması olabilecek hatlarda senkronizasyon ve CRC doğrulaması eklenir: \code{[0xAA 0x55] [Flag] [Length] + [Standart DEOS Frame (9+N Byte)] + [CRC16 (2B)]}.
+    \item \textbf{ROS 2 / UDP:} Doğrudan \code{[Standart DEOS Frame (9+N Byte)]} datagram olarak iletilir.
+\end{itemize}
 
 \section{REQUEST--RESPONSE ve CONFIG Ayrımı}
 

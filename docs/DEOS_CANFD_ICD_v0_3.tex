@@ -248,7 +248,6 @@ Node ID & Symbol & Fiziksel Cihaz & Görev \\
 \hex{10} & \code{DEOS\_NODE\_TRACTION} & STM32 Traction ECU & Tahrik sistemi kontrolü \\
 \hex{11} & \code{DEOS\_NODE\_STEERING} & STM32 Steering ECU & Direksiyon sistemi kontrolü \\
 \hex{12} & \code{DEOS\_NODE\_BRAKE} & STM32 Brake ECU & Fren sistemi kontrolü \\
-\hex{14} & \code{DEOS\_NODE\_LIGHTING} & STM32 / Aydınlatma ECU & Aydınlatma ve sinyalizasyon kontrolü \\
 \hex{20} & \code{DEOS\_NODE\_BMS\_MAIN} & DALY BMS \#1 & Ana batarya BMS \\
 \hex{21} & \code{DEOS\_NODE\_BMS\_AUX} & DALY BMS \#2 & Yardımcı batarya BMS \\
 \hex{30} & \code{DEOS\_NODE\_BMS\_GATEWAY} & CAN Gateway & Classic CAN--CAN-FD çevirici \\
@@ -284,7 +283,6 @@ typedef enum
     DEOS_NODE_TRACTION       = 0x10,
     DEOS_NODE_STEERING       = 0x11,
     DEOS_NODE_BRAKE          = 0x12,
-    DEOS_NODE_LIGHTING       = 0x14,
 
     DEOS_NODE_BMS_MAIN       = 0x20,
     DEOS_NODE_BMS_AUX        = 0x21,
@@ -434,7 +432,6 @@ MICRO\_ROS & X & -- & -- & -- & -- & -- & X & -- \\
 TRACTION & X & X & -- & -- & -- & X & X & -- \\
 STEERING & X & -- & X & -- & -- & X & X & -- \\
 BRAKE & X & -- & -- & X & -- & X & X & -- \\
-LIGHTING & X & -- & -- & -- & -- & -- & X & X \\
 BMS\_MAIN & X & -- & -- & -- & X & -- & X & -- \\
 BMS\_AUX & X & -- & -- & -- & X & -- & X & -- \\
 BMS\_GATEWAY & X & -- & -- & -- & X & -- & X & -- \\
@@ -647,38 +644,30 @@ typedef enum
 
 \subsection{LIGHTING Service Komutları}
 
-Aydınlatma ve sinyalizasyon servisi (\code{DEOS\_SERVICE\_LIGHTING} = \hex{08}) araçtaki tüm aydınlatma elemanlarını yönetir.
+Aydınlatma servisi (\code{DEOS\_SERVICE\_LIGHTING} = \hex{08}) araçtaki farların açılıp kapatılmasını yönetir.
 
 \begin{center}
-\begin{tabular}{c l}
+\begin{tabularx}{\textwidth}{c l c X}
 \toprule
-ID & Symbol \\
+ID & Symbol & Length & Açıklama \\
 \midrule
-\hex{01} & \code{DEOS\_CMD\_LIGHTING\_SET\_STATE} \\
-\hex{02} & \code{DEOS\_CMD\_LIGHTING\_TURN\_ON} \\
-\hex{03} & \code{DEOS\_CMD\_LIGHTING\_TURN\_OFF} \\
-\hex{04} & \code{DEOS\_CMD\_LIGHTING\_SET\_ALL} \\
-\hex{05} & \code{DEOS\_CMD\_LIGHTING\_GET\_STATUS} \\
-\hex{06} & \code{DEOS\_CMD\_LIGHTING\_STATUS} \\
+\hex{01} & \code{DEOS\_CMD\_LIGHTING\_TURN\_ON} & 1 byte & Hedef farı açar (Payload: Light ID) \\
+\hex{02} & \code{DEOS\_CMD\_LIGHTING\_TURN\_OFF} & 1 byte & Hedef farı kapatır (Payload: Light ID) \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \begin{lstlisting}[style=cstyle]
 typedef enum
 {
-    DEOS_CMD_LIGHTING_SET_STATE  = 0x01,
-    DEOS_CMD_LIGHTING_TURN_ON    = 0x02,
-    DEOS_CMD_LIGHTING_TURN_OFF   = 0x03,
-    DEOS_CMD_LIGHTING_SET_ALL    = 0x04,
-    DEOS_CMD_LIGHTING_GET_STATUS = 0x05,
-    DEOS_CMD_LIGHTING_STATUS     = 0x06
+    DEOS_CMD_LIGHTING_TURN_ON  = 0x01,
+    DEOS_CMD_LIGHTING_TURN_OFF = 0x02
 } deos_lighting_command_t;
 \end{lstlisting}
 
-\subsubsection{Far ve Lamba Adresleri (Light ID)}
+\subsubsection{Far ID Tanımları (Light ID)}
 
-Komut payload'ında hangi aydınlatma elemanının hedeflendiği 8-bit \code{Light ID} ile belirtilir:
+Komut payload'ında hedef far 1 baytlık \code{Light ID} ile iletilir:
 
 \begin{center}
 \begin{tabular}{c l l}
@@ -689,29 +678,24 @@ Adres & Sembolik İsim & Açıklama \\
 \hex{02} & \code{DEOS\_LIGHT\_BRAKE} & Fren Lambası \\
 \hex{03} & \code{DEOS\_LIGHT\_TURN\_LEFT} & Sol Sinyal \\
 \hex{04} & \code{DEOS\_LIGHT\_TURN\_RIGHT} & Sağ Sinyal \\
-\hex{05} & \code{DEOS\_LIGHT\_HAZARD} & Dörtlü Flaşör \\
 \hex{FF} & \code{DEOS\_LIGHT\_ALL} & Tüm Işıklar \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsubsection{Far Durum Kodları (State)}
+\begin{lstlisting}[style=cstyle]
+typedef enum
+{
+    DEOS_LIGHT_HEADLIGHT  = 0x01,
+    DEOS_LIGHT_BRAKE      = 0x02,
+    DEOS_LIGHT_TURN_LEFT  = 0x03,
+    DEOS_LIGHT_TURN_RIGHT = 0x04,
+    DEOS_LIGHT_ALL        = 0xFF
+} deos_light_id_t;
+\end{lstlisting}
 
-\begin{center}
-\begin{tabular}{c l l}
-\toprule
-Kod & Sembolik İsim & Durum \\
-\midrule
-\hex{00} & \code{DEOS\_LIGHT\_STATE\_OFF} & Kapalı \\
-\hex{01} & \code{DEOS\_LIGHT\_STATE\_ON} & Açık \\
-\hex{02} & \code{DEOS\_LIGHT\_STATE\_BLINK} & Flaşör (Sinyal 1 Hz) \\
-\hex{03} & \code{DEOS\_LIGHT\_STATE\_FAST\_BLINK} & Hızlı Flaşör (Acil 4 Hz) \\
-\bottomrule
-\end{tabular}
-\end{center}
+Payload toplam 1 bayttır (\code{Byte 0 = Light ID}, \code{Length = 0x01}).
 
-\code{DEOS\_CMD\_LIGHTING\_SET\_STATE} (\hex{01}) komutunun payload'ı 2 byte'tır:
-\code{Byte 0 = Light ID}, \code{Byte 1 = State}.
 
 \section{CONFIG Message Class ve Parameter Registry}
 
@@ -1036,6 +1020,55 @@ DEOS CAN-FD frame'leri 29-bit Extended Identifier, CAN-FD formatı ve Bit Rate S
 (BRS) kullanır. Nominal/arbitration bitrate ile data-phase bitrate değerleri deployment
 parametreleridir ve bu ICD revizyonunda sabitlenmemiştir.
 
+\section{Medya Bağımsız Standart DEOS Taşıma Çerçevesi (Universal Transport Frame)}
+
+DEOS protokolü, CAN-FD donanımının 29-bit Arbitration ID ve bit paketleme kısıtlarından bağımsız olarak; Ethernet (TCP/UDP), LoRa (UART), ROS 2 köprüleri ve Yer Kontrol İstasyonu (Python) gibi tüm harici sistemlerle uçtan uca haberleşebilmek için standart bir \textbf{Evrensel Taşıma Çerçevesi (Universal DEOS Transport Frame)} tanımlar.
+
+Dış ortamdan üretilen bir mesaj, CAN ID hesaplamasına veya donanımsal bit kaydırmalarına gerek kalmaksızın doğrudan bu standart dizilim ile paketlenir. Mesaj STM32 Ana Beyin (Router) katmanına ulaştığında, hedef CAN düğümüyse otomatik olarak 29-bit CAN ID ve CAN-FD verisine dönüştürülür.
+
+\subsection{Standart Çerçeve Anatomisi (Byte Byte)}
+
+Evrensel çerçeve, \textbf{9 Byte Sabit Başlık (Header)} ve ardından gelen $N$ Byte \textbf{Payload} alanından oluşur:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+\textbf{Byte} & \textbf{Alan Adı} & \textbf{Tip} & \textbf{Boyut} & \textbf{Açıklama} \\
+\midrule
+\textbf{0} & \code{Destination Node} & \code{uint8\_t} & 1 Byte & Hedef düğüm kimliği (Örn: \hex{03} Main STM32, \hex{10} Traction, \hex{FF} Broadcast). \\
+\textbf{1} & \code{Source Node} & \code{uint8\_t} & 1 Byte & Kaynak düğüm kimliği (Örn: \hex{02} Ground Control, \hex{06} Textual UI). \\
+\textbf{2} & \code{Priority} & \code{uint8\_t} & 1 Byte & Mesaj önceliği (\hex{00} CRITICAL .. \hex{05} NETWORK). \\
+\textbf{3} & \code{Version} & \code{uint8\_t} & 1 Byte & DEOS protokol sürümü (Varsayılan: \hex{11} = v1.1). \\
+\textbf{4} & \code{Message Class} & \code{uint8\_t} & 1 Byte & Mesaj sınıfı (\hex{01} COMMAND, \hex{02} RESPONSE, \hex{07} NETWORK vb.). \\
+\textbf{5} & \code{Service ID} & \code{uint8\_t} & 1 Byte & Fonksiyonel servis (\hex{00} SYSTEM, \hex{01} TRACTION, \hex{08} LIGHTING vb.). \\
+\textbf{6} & \code{Command ID} & \code{uint8\_t} & 1 Byte & Servise ait komut (\hex{01} TURN\_ON, \hex{02} TURN\_OFF, \hex{08} PING vb.). \\
+\textbf{7} & \code{Sequence} & \code{uint8\_t} & 1 Byte & Mesaj takip sayacı (\hex{00} -- \hex{FF}). \\
+\textbf{8} & \code{Payload Length} & \code{uint8\_t} & 1 Byte & Arkadan gelen dinamik veri bayt sayısı ($N$, 0--60 byte). \\
+\midrule
+\textbf{9..} & \textbf{Payload} & \code{uint8\_t[$N$]} & $N$ Byte & Gerçek komut/telemetri verisi (Örn: Far ID, Ping ID, Hız hedefi). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Toplam Paket Boyutu:} $9 + N$ Byte.
+
+\subsection{CAN-FD Dönüşüm Mekanizması}
+
+Bu çerçeve STM32 Gateway/Router düğümüne ulaştığında:
+\begin{enumerate}
+    \item \textbf{29-bit CAN ID:} Byte 0 (\code{Destination}), Byte 1 (\code{Source}), Byte 2 (\code{Priority}), Byte 4 (\code{Message Class}) ve Byte 5 (\code{Service}) alanları sürücü tarafından otomatik olarak 29-bit Extended CAN Identifier'a dönüştürülür.
+    \item \textbf{CAN-FD Data Payload:} Byte 3 (\code{Version}), Byte 7 (\code{Sequence}), Byte 6 (\code{Command}), Byte 8 (\code{Payload Length}) ve ardından gelen \code{Payload} alanları doğrudan CAN-FD frame'inin veri alanına yazılır.
+\end{enumerate}
+
+\subsection{Fiziksel İletim Katmanlarına Göre Dış Zarf (L2 Framing)}
+
+Evrensel 9+N baytlık standart DEOS çerçevesi, fiziksel iletim hattının özelliklerine göre dış zarflarla taşınır:
+\begin{itemize}
+    \item \textbf{Ethernet (TCP):} TCP zaten akış kontrolü ve sağlama toplamı sağladığından, çerçevenin başına sadece toplam paket boyutu eklenir: \code{[Length (1B)] + [Standart DEOS Frame (9+N Byte)]}.
+    \item \textbf{LoRa / Seri Port (UART):} Gürültülü ve bayt kayması olabilecek hatlarda senkronizasyon ve CRC doğrulaması eklenir: \code{[0xAA 0x55] [Flag] [Length] + [Standart DEOS Frame (9+N Byte)] + [CRC16 (2B)]}.
+    \item \textbf{ROS 2 / UDP:} Doğrudan \code{[Standart DEOS Frame (9+N Byte)]} datagram olarak iletilir.
+\end{itemize}
+
 \section{REQUEST--RESPONSE ve CONFIG Ayrımı}
 
 REQUEST, RESPONSE ve CONFIG birbirinden bağımsız mesaj sınıflarıdır ve farklı amaçlara hizmet eder.
@@ -1305,14 +1338,13 @@ Gateway kullanılması bu mantıksal kimliği değiştirmez.
 
 \begin{verbatim}
 Source        = DEOS_NODE_GROUND_CONTROL
-Destination   = DEOS_NODE_LIGHTING
+Destination   = DEOS_NODE_MAIN_STM32
 Priority      = DEOS_PRIO_CONTROL
 Message Class = DEOS_CLASS_COMMAND
 Service       = DEOS_SERVICE_LIGHTING
-Command       = DEOS_CMD_LIGHTING_SET_STATE
-Length        = 0x02
-Payload       = [0x01, 0x01] (Light ID: HEADLIGHT, State: ON)
-CAN-ID        = 0x08481402
+Command       = DEOS_CMD_LIGHTING_TURN_ON
+Length        = 0x01
+Payload       = [0x01] (Light ID: HEADLIGHT)
 \end{verbatim}
 
 
