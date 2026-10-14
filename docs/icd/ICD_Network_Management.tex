@@ -46,7 +46,7 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\textbf{DEOS Network \& System Management ICD}\\
-\large Sürüm 1.3 -- SYSTEM Servisi, Ağ Yönetimi, Düğüm Bilgisi ve Telemetri Aboneliği}
+\large Sürüm 1.4 -- SYSTEM Servisi, Ağ Yönetimi, Düğüm Bilgisi ve Telemetri/Değişim Aboneliği}
 \author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
 \date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 15 Ekim 2026}
 
@@ -58,10 +58,10 @@
 \begin{tabularx}{\textwidth}{ll lX}
 \toprule
 \textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NET-003} \\
-\textbf{Doküman Sürümü:} & Sürüm 1.3 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Doküman Sürümü:} & Sürüm 1.4 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
 \textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
 \textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 15 Ekim 2026 \\
-\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}), PING/PONG, Node Info \& Telemetri Aboneliği \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}), PING/PONG, Node Info \& Telemetri/Olay Aboneliği \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -78,6 +78,7 @@ v1.0 & 04 Ekim 2026 & Emir Arkalı & Ağ yönetimi bağımsız doküman oluştur
 v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
 v1.2 & 15 Ekim 2026 & Emir Arkalı & Düğüm bilgisi sorgulama (GET\_NODE\_INFO) istek ve 20 baytlık standart cevap formatı eklendi. \\
 v1.3 & 15 Ekim 2026 & Emir Arkalı & Dinamik telemetri ve durum aboneliği (SUBSCRIBE/UNSUBSCRIBE) mekanizması ve çoklu abone kuralları eklendi. \\
+v1.4 & 15 Ekim 2026 & Emir Arkalı & Değişim bazlı (On-Change / Event-Driven) telemetri abonelik modu (\code{interval\_ms = 0xFFFF}) tanımlandı. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -418,7 +419,7 @@ Byte & Alan Adı & Tip & Boyut & Açıklama \\
 \midrule
 0 & Target Service & \code{uint8\_t} & 1 Byte & Abone olunmak istenen servis (\code{DEOS\_SERVICE\_BMS}, \code{SYSTEM} vb.) \\
 1 & Target Command & \code{uint8\_t} & 1 Byte & Abone olunmak istenen durum komutu (\code{DEOS\_CMD\_BMS\_STATUS}, \code{HEARTBEAT} vb.) \\
-2--3 & Interval & \code{uint16\_t} & 2 Byte & İstenen periyot (milisaniye, ms). Örn: 100 ms (10 Hz). \code{0} girilirse abonelik iptali sayılır. \\
+2--3 & Interval & \code{uint16\_t} & 2 Byte & İstenen periyot (milisaniye, ms): \code{0} = İptal, \code{10--65534} = Periyodik akış, \hex{FFFF} (\code{DEOS\_INTERVAL\_ON\_CHANGE}) = Sadece Durum Değiştiğinde Gönder (On-Change Modu). \\
 4--5 & Lease TTL & \code{uint16\_t} & 2 Byte & Kira Süresi (Saniye): \code{0} = Sonsuz (Manuel iptale kadar). \code{> 0} = Abone canlı kalmaz veya yenilemezse otomatik kapanma süresi. \\
 \bottomrule
 \end{tabularx}
@@ -520,6 +521,32 @@ Sistemde bulunan tüm mikrodenetleyicilerin hatta sürekli periyodik heartbeat b
     \item İzlenmeyen veya yedek bekleyen pasif düğümler hatta paket basmaz.
     \item Araç acil duruma (\code{SAFE} / \code{FAULT}) geçtiğinde abonelikler dinamik olarak kapatılabilir veya frekansları düşürülebilir.
 \end{itemize}
+
+\subsection{Değişime Dayalı Telemetri Aboneliği (On-Change / Event-Driven Telemetry)}
+
+Düşük bant genişliğine sahip hatlarda (örneğin LoRa telemetrisi), nadir değişen alt sistemlerde (aydınlatma, kontak, konfigürasyon) veya ROS 2 otonom sürüş katmanında, verinin sabit zaman aralıklarıyla (periyodik) basılması yerine yalnızca \textbf{durum değiştiğinde} basılması istenir.
+
+Bu amaçla \code{interval\_ms} parametresi için özel bir sabit tanımlanmıştır:
+
+\begin{center}
+\textbf{\code{DEOS\_INTERVAL\_ON\_CHANGE = 0xFFFF} (\hex{FFFF})}
+\end{center}
+
+\subsubsection{Davranış Kuralları}
+\begin{enumerate}
+    \item \textbf{Zamanlayıcı Baypas Edilir (No Periodic Ticking):}
+    Üretici düğümün 10 ms'lik periyodik tarayıcısı, \code{interval\_ms = 0xFFFF} olan abonelik yuvaları için periyodik tetikleme yapmaz.
+    
+    \item \textbf{Uygulama Tetiklemeli İletim (Event Notification):}
+    Üretici düğümün uygulama katmanı durumunda bir değişiklik tespit ettiğinde (örneğin vites değiştiğinde, farlar açıldığında veya kritik bir eşik aşıldığında) kütüphane API'sini çağırır:
+    \begin{lstlisting}[style=cstyle]
+deos_subscription_notify_change(DEOS_SERVICE_TRACTION, DEOS_CMD_TRACTION_GET_STATUS);
+    \end{lstlisting}
+    Kütüphane, tablodaki \code{ON\_CHANGE} abonelerini filtreler ve mevcut handler üzerinden güncel durumu anında Unicast olarak ilgili abonelere iletir.
+
+    \item \textbf{Kira Süresi (Lease TTL) Geçerliliği:}
+    On-Change modunda da \code{lease\_ttl\_s} kuralı geçerlidir. Eğer abone düğüm canlı kalmaz ve belirlenen süre içinde aboneliğini yenilemezse, hafızada yetim (orphaned) dinleyici kalmaması için abonelik kaydı otomatik olarak temizlenir.
+\end{enumerate}
 
 \subsection{C Struct Tanımları}
 

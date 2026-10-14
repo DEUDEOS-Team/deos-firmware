@@ -111,8 +111,9 @@ void deos_subscription_handle_subscribe(const deos_message_t *msg)
         return;
     }
 
-    /* Enforce minimum resolution of 10 ms */
-    uint16_t actual_interval = (interval_ms < 10) ? 10 : interval_ms;
+    /* Enforce minimum resolution of 10 ms for periodic streams; preserve ON_CHANGE */
+    uint16_t actual_interval = (interval_ms == DEOS_INTERVAL_ON_CHANGE) ?
+                                DEOS_INTERVAL_ON_CHANGE : ((interval_ms < 10) ? 10 : interval_ms);
 
     k_mutex_lock(&sub_lock, K_FOREVER);
 
@@ -242,7 +243,8 @@ void deos_subscription_process(void)
                         sub_table[i].subscriber_node, sub_table[i].local_node,
                         sub_table[i].service, sub_table[i].command);
                 sub_table[i].in_use = false;
-            } else if (now - sub_table[i].last_sent_ms >= sub_table[i].interval_ms) {
+            } else if (sub_table[i].interval_ms != DEOS_INTERVAL_ON_CHANGE &&
+                       now - sub_table[i].last_sent_ms >= sub_table[i].interval_ms) {
                 sub_table[i].last_sent_ms = now;
                 entry = sub_table[i];
                 should_trigger = true;
@@ -360,4 +362,82 @@ int deos_unsubscribe(deos_node_id_t destination, deos_service_id_t service, uint
 
     return deos_unsubscribe_from_node(
         config->node_id, destination, service, command);
+}
+
+int deos_subscription_notify_change_for_node(deos_node_id_t local_node,
+                                             deos_service_id_t service,
+                                             uint8_t command)
+{
+    if (!deos_is_local_node(local_node)) {
+        return -EPERM;
+    }
+
+    struct deos_subscription_entry targets[DEOS_MAX_SUBSCRIPTIONS];
+    int target_count = 0;
+    int64_t now = k_uptime_get();
+
+    k_mutex_lock(&sub_lock, K_FOREVER);
+    for (int i = 0; i < DEOS_MAX_SUBSCRIPTIONS; i++) {
+        if (sub_table[i].in_use &&
+            sub_table[i].local_node == local_node &&
+            sub_table[i].service == service &&
+            sub_table[i].command == command &&
+            sub_table[i].interval_ms == DEOS_INTERVAL_ON_CHANGE) {
+
+            /* Check TTL expiry */
+            if (sub_table[i].expire_time_ms > 0 && now >= sub_table[i].expire_time_ms) {
+                LOG_INF("Subscription expired: 0x%02X -> 0x%02X (Svc: 0x%02X Cmd: 0x%02X)",
+                        sub_table[i].subscriber_node, sub_table[i].local_node,
+                        sub_table[i].service, sub_table[i].command);
+                sub_table[i].in_use = false;
+                continue;
+            }
+
+            sub_table[i].last_sent_ms = now;
+            targets[target_count++] = sub_table[i];
+        }
+    }
+    k_mutex_unlock(&sub_lock);
+
+    int notified = 0;
+    for (int i = 0; i < target_count; i++) {
+        deos_message_t synth_msg;
+        memset(&synth_msg, 0, sizeof(synth_msg));
+        synth_msg.destination = targets[i].local_node;
+        synth_msg.source = targets[i].subscriber_node;
+        synth_msg.priority = DEOS_PRIO_STATUS;
+        synth_msg.message_class = DEOS_CLASS_REQUEST;
+        synth_msg.service = targets[i].service;
+        synth_msg.command = targets[i].command;
+        synth_msg.version = DEOS_PROTOCOL_VERSION;
+        synth_msg.payload_len = 0;
+
+        void *user_data = NULL;
+        deos_message_handler_t handler = deos_dispatch_find_handler(
+            targets[i].local_node, DEOS_CLASS_REQUEST, targets[i].service, targets[i].command, &user_data);
+
+        if (handler) {
+            int ret = handler(&synth_msg, user_data);
+            if (ret != 0) {
+                LOG_DBG("On-Change handler returned %d for Svc: 0x%02X Cmd: 0x%02X",
+                        ret, targets[i].service, targets[i].command);
+                deos_fault_raise_for_node(targets[i].local_node, DEOS_FAULT_SUB_DISPATCH_FAILED, DEOS_FAULT_SEVERITY_WARNING);
+            } else {
+                notified++;
+            }
+        } else {
+            LOG_WRN("On-Change subscription has no matching handler on node 0x%02X", targets[i].local_node);
+            deos_fault_raise_for_node(targets[i].local_node, DEOS_FAULT_SUB_HANDLER_NOT_FOUND, DEOS_FAULT_SEVERITY_ERROR);
+        }
+    }
+
+    return notified;
+}
+
+int deos_subscription_notify_change(deos_service_id_t service, uint8_t command)
+{
+    const struct deos_config *config = deos_get_config();
+    if (!config) return -ENODEV;
+
+    return deos_subscription_notify_change_for_node(config->node_id, service, command);
 }

@@ -151,6 +151,23 @@ int deos_unsubscribe_from_node(deos_node_id_t source_node, deos_node_id_t destin
                                deos_service_id_t service, uint8_t command);
 
 /**
+ * @brief Notify ON_CHANGE subscribers of a state update for a specific local node.
+ *
+ * @param local_node The local node ID producing the state change.
+ * @param service The service ID of the updated state.
+ * @param command The command ID of the updated state.
+ * @return Number of subscribers notified, or negative error code.
+ */
+int deos_subscription_notify_change_for_node(deos_node_id_t local_node,
+                                             deos_service_id_t service,
+                                             uint8_t command);
+
+/**
+ * @brief Notify ON_CHANGE subscribers of a state update (primary local node).
+ */
+int deos_subscription_notify_change(deos_service_id_t service, uint8_t command);
+
+/**
  * @brief Transport TX function pointer type.
  */
 typedef int (*deos_transport_tx_fn_t)(const deos_message_t *msg);

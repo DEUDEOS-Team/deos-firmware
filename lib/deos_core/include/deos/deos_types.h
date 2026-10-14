@@ -73,6 +73,8 @@ struct deos_heartbeat_payload {
     uint8_t current_state; /* deos_state_t */
 } __attribute__((packed));
 
+#define DEOS_INTERVAL_ON_CHANGE 0xFFFF
+
 struct deos_subscribe_req_payload {
     uint8_t  target_service;
     uint8_t  target_command;
