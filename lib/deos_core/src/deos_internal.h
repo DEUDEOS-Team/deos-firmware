@@ -27,6 +27,12 @@ extern "C" {
 #define DEOS_MAX_HANDLERS 32
 #endif
 
+#ifdef CONFIG_DEOS_MAX_SUBSCRIPTIONS
+#define DEOS_MAX_SUBSCRIPTIONS CONFIG_DEOS_MAX_SUBSCRIPTIONS
+#else
+#define DEOS_MAX_SUBSCRIPTIONS 8
+#endif
+
 #ifdef CONFIG_DEOS_RX_QUEUE_SIZE
 #define DEOS_RX_QUEUE_SIZE CONFIG_DEOS_RX_QUEUE_SIZE
 #else
@@ -96,6 +102,21 @@ int deos_tx_start(void);
  */
 int deos_dispatch_init(void);
 void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport);
+deos_message_handler_t deos_dispatch_find_handler(
+    deos_node_id_t local_node,
+    deos_message_class_t message_class,
+    deos_service_id_t service,
+    uint8_t command,
+    void **out_user_data);
+
+/*
+ * Subscription Engine (deos_subscription.c)
+ */
+int deos_subscription_init(void);
+int deos_subscription_start(void);
+void deos_subscription_handle_subscribe(const deos_message_t *msg);
+void deos_subscription_handle_unsubscribe(const deos_message_t *msg);
+void deos_subscription_process(void);
 
 /*
  * Network / System (deos_network.c)

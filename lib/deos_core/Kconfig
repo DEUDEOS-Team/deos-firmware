@@ -18,6 +18,12 @@ config DEOS_MAX_HANDLERS
     help
       Maximum number of registered message handlers across all local nodes.
 
+config DEOS_MAX_SUBSCRIPTIONS
+    int "Maximum number of telemetry subscriptions"
+    default 8
+    help
+      Maximum capacity of the active telemetry subscription table.
+
 config DEOS_RX_QUEUE_SIZE
     int "RX Message Queue Size"
     default 16

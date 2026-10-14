@@ -92,6 +92,28 @@ int deos_register_handler(
         config->node_id, message_class, service, command, handler, user_data);
 }
 
+deos_message_handler_t deos_dispatch_find_handler(
+    deos_node_id_t local_node,
+    deos_message_class_t message_class,
+    deos_service_id_t service,
+    uint8_t command,
+    void **out_user_data)
+{
+    for (int i = 0; i < DEOS_MAX_HANDLERS; i++) {
+        if (handler_registry[i].in_use &&
+            handler_registry[i].local_node == local_node &&
+            handler_registry[i].message_class == message_class &&
+            handler_registry[i].service == service &&
+            handler_registry[i].command == command) {
+            if (out_user_data) {
+                *out_user_data = handler_registry[i].user_data;
+            }
+            return handler_registry[i].handler;
+        }
+    }
+    return NULL;
+}
+
 void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport)
 {
     const struct deos_config *config = deos_get_config();
@@ -120,6 +142,17 @@ void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transpor
                 break;
             default:
                 break; /* Allow app to handle other system network cmds */
+        }
+    }
+
+    /* Common Subscription Behaviour */
+    if (msg->service == DEOS_SERVICE_SYSTEM && msg->message_class == DEOS_CLASS_REQUEST) {
+        if (msg->command == DEOS_CMD_SYSTEM_SUBSCRIBE) {
+            deos_subscription_handle_subscribe(msg);
+            return;
+        } else if (msg->command == DEOS_CMD_SYSTEM_UNSUBSCRIBE) {
+            deos_subscription_handle_unsubscribe(msg);
+            return;
         }
     }
 

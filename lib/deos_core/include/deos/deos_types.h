@@ -73,6 +73,25 @@ struct deos_heartbeat_payload {
     uint8_t current_state; /* deos_state_t */
 } __attribute__((packed));
 
+struct deos_subscribe_req_payload {
+    uint8_t  target_service;
+    uint8_t  target_command;
+    uint16_t interval_ms;
+    uint16_t lease_ttl_s;
+} __attribute__((packed));
+
+struct deos_subscribe_resp_payload {
+    uint8_t  result_code;
+    uint8_t  target_service;
+    uint8_t  target_command;
+    uint16_t actual_interval_ms;
+} __attribute__((packed));
+
+struct deos_unsubscribe_req_payload {
+    uint8_t  target_service;
+    uint8_t  target_command;
+} __attribute__((packed));
+
 /*
  * TRACTION Command Payloads
  */

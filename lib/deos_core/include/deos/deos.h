@@ -115,6 +115,42 @@ int deos_send_response(const deos_message_t *original, deos_result_t result,
                        const void *data, uint8_t data_len);
 
 /**
+ * @brief Send a SUBSCRIBE request to a target node.
+ *
+ * @param destination Target producer node ID.
+ * @param service Target service to subscribe to.
+ * @param command Target status command to subscribe to.
+ * @param interval_ms Desired streaming interval in milliseconds.
+ * @param lease_ttl_s Lease duration in seconds (0 = infinite).
+ * @return 0 on success, negative error code on failure.
+ */
+int deos_subscribe(deos_node_id_t destination, deos_service_id_t service,
+                   uint8_t command, uint16_t interval_ms, uint16_t lease_ttl_s);
+
+/**
+ * @brief Send a SUBSCRIBE request from a specific local node.
+ */
+int deos_subscribe_from_node(deos_node_id_t source_node, deos_node_id_t destination,
+                             deos_service_id_t service, uint8_t command,
+                             uint16_t interval_ms, uint16_t lease_ttl_s);
+
+/**
+ * @brief Send an UNSUBSCRIBE request to a target node.
+ *
+ * @param destination Target producer node ID.
+ * @param service Target service to unsubscribe from.
+ * @param command Target command (0xFF = all commands).
+ * @return 0 on success, negative error code on failure.
+ */
+int deos_unsubscribe(deos_node_id_t destination, deos_service_id_t service, uint8_t command);
+
+/**
+ * @brief Send an UNSUBSCRIBE request from a specific local node.
+ */
+int deos_unsubscribe_from_node(deos_node_id_t source_node, deos_node_id_t destination,
+                               deos_service_id_t service, uint8_t command);
+
+/**
  * @brief Transport TX function pointer type.
  */
 typedef int (*deos_transport_tx_fn_t)(const deos_message_t *msg);

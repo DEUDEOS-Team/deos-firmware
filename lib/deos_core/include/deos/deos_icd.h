@@ -136,9 +136,12 @@ typedef enum {
     DEOS_CMD_SYSTEM_SET_MODE      = 0x04,
     DEOS_CMD_SYSTEM_RESET_NODE    = 0x05,
     DEOS_CMD_SYSTEM_GET_NODE_INFO = 0x06,
-    DEOS_CMD_SYSTEM_HEARTBEAT     = 0x07,
-    DEOS_CMD_SYSTEM_PING          = 0x08,
-    DEOS_CMD_SYSTEM_PONG          = 0x09
+    DEOS_CMD_SYSTEM_HEARTBEAT          = 0x07,
+    DEOS_CMD_SYSTEM_PING               = 0x08,
+    DEOS_CMD_SYSTEM_PONG               = 0x09,
+    DEOS_CMD_SYSTEM_SUBSCRIBE          = 0x0A,
+    DEOS_CMD_SYSTEM_UNSUBSCRIBE        = 0x0B,
+    DEOS_CMD_SYSTEM_GET_SUBSCRIPTIONS  = 0x0C
 } deos_system_command_t;
 
 /*

@@ -78,6 +78,12 @@ int deos_init(const struct deos_config *config)
         return ret;
     }
 
+    ret = deos_subscription_init();
+    if (ret != 0) {
+        LOG_ERR("Failed to init subscription engine");
+        return ret;
+    }
+
     is_initialized = true;
     LOG_INF("DEOS Core initialized (Node ID: 0x%02X)", core_config.node_id);
 
@@ -103,6 +109,12 @@ int deos_start(void)
     ret = deos_tx_start();
     if (ret != 0) {
         LOG_ERR("Failed to start TX threads");
+        return ret;
+    }
+
+    ret = deos_subscription_start();
+    if (ret != 0) {
+        LOG_ERR("Failed to start subscription scheduler");
         return ret;
     }
 
