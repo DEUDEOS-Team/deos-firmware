@@ -46,7 +46,7 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\textbf{DEOS Network \& System Management ICD}\\
-\large Sürüm 1.2 -- SYSTEM Servisi, Ağ Yönetimi ve Düğüm Bilgisi}
+\large Sürüm 1.3 -- SYSTEM Servisi, Ağ Yönetimi, Düğüm Bilgisi ve Telemetri Aboneliği}
 \author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
 \date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 15 Ekim 2026}
 
@@ -58,10 +58,10 @@
 \begin{tabularx}{\textwidth}{ll lX}
 \toprule
 \textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NET-003} \\
-\textbf{Doküman Sürümü:} & Sürüm 1.2 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Doküman Sürümü:} & Sürüm 1.3 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
 \textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
 \textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 15 Ekim 2026 \\
-\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}), PING/PONG \& Düğüm Bilgisi \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}), PING/PONG, Node Info \& Telemetri Aboneliği \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -77,6 +77,7 @@ v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanım�
 v1.0 & 04 Ekim 2026 & Emir Arkalı & Ağ yönetimi bağımsız doküman oluşturuldu. \\
 v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
 v1.2 & 15 Ekim 2026 & Emir Arkalı & Düğüm bilgisi sorgulama (GET\_NODE\_INFO) istek ve 20 baytlık standart cevap formatı eklendi. \\
+v1.3 & 15 Ekim 2026 & Emir Arkalı & Dinamik telemetri ve durum aboneliği (SUBSCRIBE/UNSUBSCRIBE) mekanizması ve çoklu abone kuralları eklendi. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -99,6 +100,9 @@ ID & Symbol \\
 \hex{07} & \code{DEOS\_CMD\_SYSTEM\_HEARTBEAT} \\
 \hex{08} & \code{DEOS\_CMD\_SYSTEM\_PING} \\
 \hex{09} & \code{DEOS\_CMD\_SYSTEM\_PONG} \\
+\hex{0A} & \code{DEOS\_CMD\_SYSTEM\_SUBSCRIBE} \\
+\hex{0B} & \code{DEOS\_CMD\_SYSTEM\_UNSUBSCRIBE} \\
+\hex{0C} & \code{DEOS\_CMD\_SYSTEM\_GET\_SUBSCRIPTIONS} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -106,15 +110,18 @@ ID & Symbol \\
 \begin{lstlisting}[style=cstyle]
 typedef enum
 {
-    DEOS_CMD_SYSTEM_GET_STATE     = 0x01,
-    DEOS_CMD_SYSTEM_SET_STATE     = 0x02,
-    DEOS_CMD_SYSTEM_GET_MODE      = 0x03,
-    DEOS_CMD_SYSTEM_SET_MODE      = 0x04,
-    DEOS_CMD_SYSTEM_RESET_NODE    = 0x05,
-    DEOS_CMD_SYSTEM_GET_NODE_INFO = 0x06,
-    DEOS_CMD_SYSTEM_HEARTBEAT     = 0x07,
-    DEOS_CMD_SYSTEM_PING          = 0x08,
-    DEOS_CMD_SYSTEM_PONG          = 0x09
+    DEOS_CMD_SYSTEM_GET_STATE          = 0x01,
+    DEOS_CMD_SYSTEM_SET_STATE          = 0x02,
+    DEOS_CMD_SYSTEM_GET_MODE           = 0x03,
+    DEOS_CMD_SYSTEM_SET_MODE           = 0x04,
+    DEOS_CMD_SYSTEM_RESET_NODE         = 0x05,
+    DEOS_CMD_SYSTEM_GET_NODE_INFO      = 0x06,
+    DEOS_CMD_SYSTEM_HEARTBEAT          = 0x07,
+    DEOS_CMD_SYSTEM_PING               = 0x08,
+    DEOS_CMD_SYSTEM_PONG               = 0x09,
+    DEOS_CMD_SYSTEM_SUBSCRIBE          = 0x0A,
+    DEOS_CMD_SYSTEM_UNSUBSCRIBE        = 0x0B,
+    DEOS_CMD_SYSTEM_GET_SUBSCRIPTIONS  = 0x0C
 } deos_system_command_t;
 \end{lstlisting}
 
@@ -374,5 +381,170 @@ Bit 8 & \code{DEOS\_SERVICE\_LIGHTING} & \code{1 << 0x08} (\hex{00000100}) \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+\section{Dinamik Telemetri ve Durum Abonelik Mekanizması (Subscription Engine)}
+
+DEOS ağında düğümlerin veri yolunu sürekli \code{GET\_STATUS} istekleriyle (Polling) meşgul etmesini
+veya hatta dinleyen bir alıcı olmasa dahi körü körüne periyodik yayın (Blind Push) yapmasını önlemek
+amacıyla dinamik bir \textbf{Telemetri ve Durum Abonelik Mekanizması (On-Demand Telemetry Subscription)}
+tanımlanmıştır.
+
+Bu mekanizma sayesinde bir tüketici düğüm (Subscriber; örneğin \code{DEOS\_NODE\_MAIN\_STM32} veya
+\code{DEOS\_NODE\_ROS\_BRIDGE}), veri üreten bir düğüme (Publisher; örneğin \code{DEOS\_NODE\_BMS\_MAIN}
+veya \code{DEOS\_NODE\_TRACTION}) tek bir abonelik isteği göndererek, istenen durum verisinin
+belirlenen periyotta ve belirlenen kira süresi (TTL) boyunca kendisine otomatik ve tek yönlü akmasını sağlar.
+
+\subsection{SUBSCRIBE İstek Mesajı (REQUEST)}
+
+Abonelik başlatmak veya mevcut bir aboneliğin periyodunu/kira süresini güncellemek için
+\code{DEOS\_CMD\_SYSTEM\_SUBSCRIBE} (\hex{0A}) komutu kullanılır.
+
+Mesaj Başlık Alanları:
+\begin{verbatim}
+Priority      = DEOS_PRIO_CONFIG (0x04) veya DEOS_PRIO_NETWORK (0x05)
+Message Class = DEOS_CLASS_REQUEST (0x04)
+Service       = DEOS_SERVICE_SYSTEM (0x00)
+Command       = DEOS_CMD_SYSTEM_SUBSCRIBE (0x0A)
+Destination   = Hedef Üretici Düğüm (Unicast)
+Source        = İstek Yapan Abone Düğüm
+\end{verbatim}
+
+İstek Veri Yükü (Payload) Anatomisi (Toplam 6 Byte, Little-Endian):
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+Byte & Alan Adı & Tip & Boyut & Açıklama \\
+\midrule
+0 & Target Service & \code{uint8\_t} & 1 Byte & Abone olunmak istenen servis (\code{DEOS\_SERVICE\_BMS}, \code{SYSTEM} vb.) \\
+1 & Target Command & \code{uint8\_t} & 1 Byte & Abone olunmak istenen durum komutu (\code{DEOS\_CMD\_BMS\_STATUS}, \code{HEARTBEAT} vb.) \\
+2--3 & Interval & \code{uint16\_t} & 2 Byte & İstenen periyot (milisaniye, ms). Örn: 100 ms (10 Hz). \code{0} girilirse abonelik iptali sayılır. \\
+4--5 & Lease TTL & \code{uint16\_t} & 2 Byte & Kira Süresi (Saniye): \code{0} = Sonsuz (Manuel iptale kadar). \code{> 0} = Abone canlı kalmaz veya yenilemezse otomatik kapanma süresi. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{SUBSCRIBE Cevap Mesajı (RESPONSE)}
+
+Üretici düğüm, gelen abonelik isteğini işler ve sonucunu aboneye bildirir:
+
+Mesaj Başlık Alanları:
+\begin{verbatim}
+Priority      = DEOS_PRIO_NETWORK (0x05)
+Message Class = DEOS_CLASS_RESPONSE (0x05)
+Service       = DEOS_SERVICE_SYSTEM (0x00)
+Command       = DEOS_CMD_SYSTEM_SUBSCRIBE (0x0A)
+Destination   = İstek yapan abone node ID
+Source        = Cevap veren üretici node ID
+\end{verbatim}
+
+Cevap Veri Yükü (Payload) Anatomisi (Toplam 5 Byte, Little-Endian):
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+Byte & Alan Adı & Tip & Boyut & Açıklama \\
+\midrule
+0 & Result Code & \code{uint8\_t} & 1 Byte & İşlem sonucu: \hex{00} SUCCESS, \hex{01} UNSUPPORTED, \hex{03} OUT\_OF\_RANGE, \hex{05} BUSY (\code{deos\_result\_t}) \\
+1 & Target Service & \code{uint8\_t} & 1 Byte & Onaylanan hedef servis ID \\
+2 & Target Command & \code{uint8\_t} & 1 Byte & Onaylanan hedef komut ID \\
+3--4 & Actual Interval & \code{uint16\_t} & 2 Byte & Üretici tarafından tahsis edilen gerçek periyot (ms). (Donanım çözünürlüğüne yuvarlanmış değer). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{UNSUBSCRIBE İstek ve Cevap Mesajı}
+
+Aktif bir aboneliği sonlandırmak için \code{DEOS\_CMD\_SYSTEM\_UNSUBSCRIBE} (\hex{0B}) komutu kullanılır.
+
+İstek Veri Yükü (Payload) Anatomisi (Toplam 2 Byte):
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+Byte & Alan Adı & Tip & Boyut & Açıklama \\
+\midrule
+0 & Target Service & \code{uint8\_t} & 1 Byte & İptal edilecek servis ID \\
+1 & Target Command & \code{uint8\_t} & 1 Byte & İptal edilecek durum komutu ID. (\hex{FF} değeri o servisteki veya tüm aktif abonelikleri topluca kapatır). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Cevap formatı standart DEOS generic response yapısındadır (\code{Byte 0: Result Code = 0x00 SUCCESS}).
+
+\subsection{Akış Veri Mesajı Formatı (Streaming Data Delivery)}
+
+Abonelik onaylandıktan sonra üretici düğüm, belirlenen periyotta veriyi tek yönlü olarak pompalar:
+\begin{itemize}
+    \item \textbf{Destination:} Abone Düğüm Kimliği (\code{Subscriber Node ID} -- Unicast).
+    \item \textbf{Message Class:} \code{DEOS\_CLASS\_STATUS} (\hex{02}) veya Heartbeat için \code{DEOS\_CLASS\_NETWORK} (\hex{07}).
+    \item \textbf{Service / Command:} Abone olunan orijinal servis ve durum komutu (Örn: \code{BMS} / \code{STATUS}).
+    \item \textbf{Payload:} İlgili durum komutunun ilgili ICD şartnamesinde tanımlanmış olan standart veri yükü (Örn: \code{struct deos\_bms\_status\_payload}).
+\end{itemize}
+
+Bu sayede veri akışı için yeni bir taşıma zarfı veya ek bayt yükü getirilmez; sistemde tanımlı telemetri mesajları doğrudan kullanılır.
+
+\subsection{Çoklu Abone Mimarisi (Multi-Subscriber Architecture)}
+
+DEOS dağıtık yapısında aynı durum verisine birden fazla bağımsız düğüm aynı anda ihtiyaç duyabilir.
+Örneğin batarya durumuna (\code{DEOS\_SERVICE\_BMS} / \code{DEOS\_CMD\_BMS\_STATUS}):
+\begin{itemize}
+    \item \code{DEOS\_NODE\_MAIN\_STM32} genel araç yönetimi ve ekran için \textbf{100 ms (10 Hz)} ile,
+    \item \code{DEOS\_NODE\_TRACTION} motor sürücü anlık akım sınırlaması için \textbf{20 ms (50 Hz)} ile,
+    \item \code{DEOS\_NODE\_ROS\_BRIDGE} telemetri kaydı için \textbf{1000 ms (1 Hz)} ile
+\end{itemize}
+aynı anda bağımsız olarak abone olabilir.
+
+Üretici düğüm bu senaryoyu aşağıdaki kurallarla yönetir:
+
+\begin{enumerate}
+    \item \textbf{Bağımsız Abonelik Yuvaları (Independent Slots):}
+    Üretici düğümün statik tablosunda her abone için ayrı bir kayıt açılır. Her abonenin hedef adresi, talep ettiği periyot (\code{interval\_ms}), son gönderim zamanı (\code{last\_sent\_ms}) ve kira bitiş süresi (\code{expire\_time\_ms}) bağımsız işletilir.
+    
+    \item \textbf{Unicast İletim ve Çoklu Taşıma İzolasyonu:}
+    Her aboneye kendi zamanlayıcısı dolduğunda doğrudan Unicast hedef adresle mesaj iletilir. Bu kural, DEOS Multi-Transport mimarisi için hayati öneme sahiptir: \code{Main STM32} ve \code{Traction} CAN omurgasında yer alırken, \code{ROS Bridge} Ethernet üzerinde, \code{Ground Control} ise LoRa üzerindedir. Unicast gönderim sayesinde Router, paketi yalnızca ilgili arayüze yönlendirir; dar bantlı LoRa kanalına veya gereksiz alt ağlara sızma (broadcast kirliliği) engellenir.
+    
+    \item \textbf{Bağımsız İptal ve Yaşam Döngüsü:}
+    Bir abonenin aboneliğini iptal etmesi (\code{UNSUBSCRIBE}) veya kira süresinin (TTL) dolması, diğer abonelerin veri akışını kesinlikle etkilemez.
+    
+    \item \textbf{Kapasite ve Kaynak Yönetimi:}
+    Üretici düğümlerde statik tablo boyutu nominal olarak 8 yuva (\code{DEOS\_MAX\_SUBSCRIPTIONS = 8}) ile sınırlandırılmıştır. Tablo tamamen dolu olduğunda gelen yeni abonelik talebine üretici \code{DEOS\_RESULT\_BUSY} (\hex{05}) yanıtı döner.
+\end{enumerate}
+
+\subsection{İsteğe Bağlı Canlılık Bildirimi (On-Demand Heartbeat)}
+
+Sistemde bulunan tüm mikrodenetleyicilerin hatta sürekli periyodik heartbeat basması yerine, düğümler varsayılan olarak sessiz (\code{MUTE}) modda bekleyebilir.
+
+\begin{itemize}
+    \item \code{DEOS\_NODE\_MAIN\_STM32}, araç hazır duruma geçtiğinde yalnızca izlemekle yükümlü olduğu kritik düğümlere (\code{Traction}, \code{BMS}, \code{Steering}) \code{HEARTBEAT} servisi için abonelik açar (\code{Interval = 1000 ms}).
+    \item İzlenmeyen veya yedek bekleyen pasif düğümler hatta paket basmaz.
+    \item Araç acil duruma (\code{SAFE} / \code{FAULT}) geçtiğinde abonelikler dinamik olarak kapatılabilir veya frekansları düşürülebilir.
+\end{itemize}
+
+\subsection{C Struct Tanımları}
+
+\begin{lstlisting}[style=cstyle]
+typedef struct
+{
+    uint8_t  target_service; /* Service ID to subscribe to */
+    uint8_t  target_command; /* Status command ID */
+    uint16_t interval_ms;    /* Desired interval in ms (0 = unsubscribe) */
+    uint16_t lease_ttl_s;    /* Lease duration in seconds (0 = infinite) */
+} __attribute__((packed)) deos_subscribe_req_t;
+
+typedef struct
+{
+    uint8_t  result_code;        /* deos_result_t (0x00 SUCCESS, 0x05 BUSY) */
+    uint8_t  target_service;     /* Echo of target service */
+    uint8_t  target_command;     /* Echo of target command */
+    uint16_t actual_interval_ms; /* Allocated interval in ms */
+} __attribute__((packed)) deos_subscribe_resp_t;
+
+typedef struct
+{
+    uint8_t  target_service; /* Service ID to unsubscribe */
+    uint8_t  target_command; /* Command ID (0xFF = all commands) */
+} __attribute__((packed)) deos_unsubscribe_req_t;
+\end{lstlisting}
 
 \end{document}
