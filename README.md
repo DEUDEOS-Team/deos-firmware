@@ -14,7 +14,7 @@ Projeyi bilgisayarınıza kurmak için standart `git clone` **yerine** aşağıd
 
 ```bash
 # 1. Projeyi indireceğiniz yeni bir çalışma alanı (workspace) oluşturun
-west init -m https://github.com/emirarkali/deos-firmware.git deos_workspace
+west init -m https://github.com/DEUDEOS-Team/deos-firmware.git deos_workspace
 
 # 2. Çalışma alanına girin
 cd deos_workspace
