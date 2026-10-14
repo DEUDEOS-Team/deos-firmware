@@ -46,9 +46,9 @@
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{\textbf{DEOS Network \& System Management ICD}\\
-\large Sürüm 1.1 -- SYSTEM Servisi ve Ağ Yönetimi}
+\large Sürüm 1.2 -- SYSTEM Servisi, Ağ Yönetimi ve Düğüm Bilgisi}
 \author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 15 Ekim 2026}
 
 \begin{document}
 \maketitle
@@ -58,10 +58,10 @@
 \begin{tabularx}{\textwidth}{ll lX}
 \toprule
 \textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-NET-003} \\
-\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Doküman Sürümü:} & Sürüm 1.2 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
 \textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
-\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
-\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}) \& PING/PONG Ağ Erişilebilirliği \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 15 Ekim 2026 \\
+\textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & SYSTEM Servisi (\hex{00}), PING/PONG \& Düğüm Bilgisi \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -76,6 +76,7 @@
 v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
 v1.0 & 04 Ekim 2026 & Emir Arkalı & Ağ yönetimi bağımsız doküman oluşturuldu. \\
 v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+v1.2 & 15 Ekim 2026 & Emir Arkalı & Düğüm bilgisi sorgulama (GET\_NODE\_INFO) istek ve 20 baytlık standart cevap formatı eklendi. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -253,6 +254,125 @@ Byte & Alan & Tip & Açıklama \\
 0 & Current State & \code{uint8\_t} & \code{deos\_state\_t} enum değeri (örn: \hex{03} ACTIVE, \hex{05} SAFE) \\
 \bottomrule
 \end{tabularx}
+\end{center}
+
+\section{Düğüm Bilgisi (GET\_NODE\_INFO) Sorgulama Mekanizması}
+
+DEOS protokolünde yer alan bir düğümün donanım tipi, firmware revizyonu, protokol versiyonu,
+aktif çalışma süresi (uptime) ve desteklediği servis haritasını (capabilities bitmask) sorgulamak
+için \code{DEOS\_CMD\_SYSTEM\_GET\_NODE\_INFO} (\hex{06}) komutu kullanılır.
+
+Bu mekanizma, özellikle telemetri bilgisayarı (Raspberry Pi / Textual UI), Yer Kontrol İstasyonu
+ve ROS 2 Köprüsü (\code{deos\_ros\_bridge}) tarafından ağa yeni bağlanan veya hatta bulunan
+düğümlerin durumunu ve sürüm uyumluluğunu doğrulamak için kullanılır.
+
+\subsection{İstek (REQUEST) Mesaj Formatı}
+
+Düğüm bilgisi sorgulama işlemi bir istek--cevap (REQUEST--RESPONSE) işlemidir. İstek mesajı aşağıdaki
+başlık alanlarını kullanır:
+
+\begin{verbatim}
+Priority      = DEOS_PRIO_NETWORK (0x05) veya DEOS_PRIO_LOW (0x06)
+Message Class = DEOS_CLASS_REQUEST (0x04)
+Service       = DEOS_SERVICE_SYSTEM (0x00)
+Command       = DEOS_CMD_SYSTEM_GET_NODE_INFO (0x06)
+\end{verbatim}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c X}
+\toprule
+Byte & Alan & Tip & Açıklama \\
+\midrule
+0 & Protocol Version & \code{uint8\_t} & DEOS v1.1 için \hex{11} \\
+1 & Sequence & \code{uint8\_t} & İstek yapan node'un TX sequence değeri \\
+2 & Command & \code{uint8\_t} & \code{DEOS\_CMD\_SYSTEM\_GET\_NODE\_INFO} = \hex{06} \\
+3 & Length & \code{uint8\_t} & \hex{00} (Ek payload verisi bulunmaz) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Unicast Zorunluluğu}
+Tıpkı PING mekanizmasında olduğu gibi, \code{DEOS\_CMD\_SYSTEM\_GET\_NODE\_INFO} istekleri
+yalnızca \textbf{Unicast} hedef adreslerle (\code{Destination != DEOS\_NODE\_GLOBAL\_BROADCAST} ve
+\code{Destination != DEOS\_NODE\_CAN\_BROADCAST}) gönderilmelidir. Broadcast olarak atılan istekler,
+özellikle CAN-FD ve LoRa hattında aynı anda çok sayıda düğümün cevap üretmesine (response burst/collision)
+ve bant genişliğinin kilitlenmesine neden olacağı için kabul edilmez.
+
+\subsection{Cevap (RESPONSE) Mesaj Formatı}
+
+Sorgulanan hedef düğüm, geçerli bir istek aldığında \code{DEOS\_CLASS\_RESPONSE} sınıfında
+20 baytlık standart bir cevap üretir.
+
+Cevap başlık alanları:
+\begin{verbatim}
+Priority      = DEOS_PRIO_NETWORK (0x05)
+Message Class = DEOS_CLASS_RESPONSE (0x05)
+Service       = DEOS_SERVICE_SYSTEM (0x00)
+Command       = DEOS_CMD_SYSTEM_GET_NODE_INFO (0x06)
+Destination   = İstek gönderen kaynak node ID
+Source        = Sorgulanan yerel node ID
+\end{verbatim}
+
+Cevap veri yükü (Payload) anatomisi (Toplam 20 Byte, Little-Endian):
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l c c X}
+\toprule
+Byte & Alan Adı & Tip & Boyut & Açıklama \\
+\midrule
+0 & Result Code & \code{uint8\_t} & 1 Byte & İşlem sonucu: \hex{00} SUCCESS (\code{deos\_result\_t}) \\
+1 & Node ID & \code{uint8\_t} & 1 Byte & Cevap veren düğümün mantıksal kimliği (\code{deos\_node\_id\_t}) \\
+2 & Hardware Type & \code{uint8\_t} & 1 Byte & Donanım tipi (\hex{01} STM32H5, \hex{02} Linux/Pi, \hex{03} ESP32) \\
+3 & Protocol Version & \code{uint8\_t} & 1 Byte & Desteklenen wire format sürümü (\hex{11} = v1.1) \\
+4 & FW Major & \code{uint8\_t} & 1 Byte & Firmware ana sürümü (Örn: 1) \\
+5 & FW Minor & \code{uint8\_t} & 1 Byte & Firmware alt sürümü (Örn: 2) \\
+6 & FW Patch & \code{uint8\_t} & 1 Byte & Firmware yama sürümü (Örn: 0) \\
+7 & Reserved & \code{uint8\_t} & 1 Byte & 4-bayt hizalama için dolgu baytı (\hex{00}) \\
+8--11 & Git Hash & \code{uint32\_t} & 4 Byte & Derlemenin Git commit hash'inin ilk 4 baytı \\
+12--15 & Supported Services & \code{uint32\_t} & 4 Byte & Desteklenen servislerin bitmask değeri \\
+16--19 & Uptime & \code{uint32\_t} & 4 Byte & Düğümün açılışından bu yana geçen süre (Saniye) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Cevap Veri Yapısı (C Struct Tanımı)}
+
+\begin{lstlisting}[style=cstyle]
+typedef struct
+{
+    uint8_t  result_code;        /* 0x00: SUCCESS (deos_result_t) */
+    uint8_t  node_id;            /* Logical Node ID (deos_node_id_t) */
+    uint8_t  hw_type;            /* Hardware Type (e.g. 0x01 STM32H5) */
+    uint8_t  proto_version;      /* Protocol Version (0x11 = v1.1) */
+    uint8_t  fw_version_major;   /* Firmware Version - Major */
+    uint8_t  fw_version_minor;   /* Firmware Version - Minor */
+    uint8_t  fw_version_patch;   /* Firmware Version - Patch */
+    uint8_t  reserved;           /* Alignment padding (0x00) */
+    uint32_t git_hash;           /* Git commit hash prefix (4 bytes) */
+    uint32_t supported_services; /* Bitmask: (1 << DEOS_SERVICE_SYSTEM) | ... */
+    uint32_t uptime_s;           /* Node uptime in seconds */
+} __attribute__((packed)) deos_node_info_payload_t;
+\end{lstlisting}
+
+\subsection{Supported Services Bitmask Alanı}
+\code{supported\_services} 32-bit bitmask alanı, sorgulanan düğümün hangi fonksiyonel servisleri barındırdığını belirtir:
+
+\begin{center}
+\begin{tabular}{l l l}
+\toprule
+Bit & Servis Karşılığı & Değer \\
+\midrule
+Bit 0 & \code{DEOS\_SERVICE\_SYSTEM} & \code{1 << 0x00} (\hex{00000001}) \\
+Bit 1 & \code{DEOS\_SERVICE\_TRACTION} & \code{1 << 0x01} (\hex{00000002}) \\
+Bit 2 & \code{DEOS\_SERVICE\_STEERING} & \code{1 << 0x02} (\hex{00000004}) \\
+Bit 3 & \code{DEOS\_SERVICE\_BRAKE} & \code{1 << 0x03} (\hex{00000008}) \\
+Bit 4 & \code{DEOS\_SERVICE\_BMS} & \code{1 << 0x04} (\hex{00000010}) \\
+Bit 5 & \code{DEOS\_SERVICE\_CALIBRATION} & \code{1 << 0x05} (\hex{00000020}) \\
+Bit 6 & \code{DEOS\_SERVICE\_DIAGNOSTIC} & \code{1 << 0x06} (\hex{00000040}) \\
+Bit 7 & \code{DEOS\_SERVICE\_SENSORS} & \code{1 << 0x07} (\hex{00000080}) \\
+Bit 8 & \code{DEOS\_SERVICE\_LIGHTING} & \code{1 << 0x08} (\hex{00000100}) \\
+\bottomrule
+\end{tabular}
 \end{center}
 
 \end{document}
