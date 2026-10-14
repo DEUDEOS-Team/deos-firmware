@@ -36,8 +36,14 @@ void NetworkMonitor::update_heartbeat(deos_node_id_t node_id, deos_state_t node_
 void NetworkMonitor::check_watchdog(MainApp& app) {
     int64_t now = k_uptime_get();
 
-    /* Sistemi kitleyecek kritik nodlar: Motor ve Ana Batarya */
-    deos_node_id_t critical_nodes[] = {DEOS_NODE_TRACTION, DEOS_NODE_BMS_MAIN};
+    /* İzlenen kritik düğümler */
+    deos_node_id_t critical_nodes[] = {
+        DEOS_NODE_BMS_MAIN,
+        DEOS_NODE_BMS_AUX,
+        DEOS_NODE_TRACTION,
+        DEOS_NODE_BRAKE,
+        DEOS_NODE_STEERING
+    };
 
     for (size_t i = 0; i < ARRAY_SIZE(critical_nodes); i++) {
         deos_node_id_t n = critical_nodes[i];
@@ -51,6 +57,26 @@ void NetworkMonitor::check_watchdog(MainApp& app) {
 
             /* Sürekli aynı hatayı basmamak için sıfırlıyoruz */
             last_heartbeat[n] = 0;
+        }
+    }
+}
+
+void NetworkMonitor::subscribe_heartbeats() {
+    deos_node_id_t targets[] = {
+        DEOS_NODE_BMS_MAIN,
+        DEOS_NODE_BMS_AUX,
+        DEOS_NODE_TRACTION,
+        DEOS_NODE_BRAKE,
+        DEOS_NODE_STEERING
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(targets); i++) {
+        int ret = deos_subscribe(targets[i], DEOS_SERVICE_SYSTEM,
+                                 DEOS_CMD_SYSTEM_HEARTBEAT, 1000, 0);
+        if (ret == 0) {
+            LOG_INF("Subscribed to HEARTBEAT from node 0x%02X @ 1000 ms (TTL: 0)", targets[i]);
+        } else {
+            LOG_WRN("Failed to subscribe to node 0x%02X: %d", targets[i], ret);
         }
     }
 }

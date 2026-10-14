@@ -98,7 +98,10 @@ void deos_subscription_handle_subscribe(const deos_message_t *msg)
     deos_message_handler_t handler = deos_dispatch_find_handler(
         local_node, DEOS_CLASS_REQUEST, req->target_service, req->target_command, &user_data);
 
-    if (!handler) {
+    bool is_core_heartbeat = (req->target_service == DEOS_SERVICE_SYSTEM &&
+                              req->target_command == DEOS_CMD_SYSTEM_HEARTBEAT);
+
+    if (!handler && !is_core_heartbeat) {
         LOG_WRN("Subscription rejected: Node 0x%02X has no handler for Svc: 0x%02X, Cmd: 0x%02X",
                 local_node, req->target_service, req->target_command);
         deos_fault_raise_for_node(local_node, DEOS_FAULT_SUB_HANDLER_NOT_FOUND, DEOS_FAULT_SEVERITY_WARNING);
@@ -232,7 +235,7 @@ void deos_subscription_process(void)
     int64_t now = k_uptime_get();
 
     for (int i = 0; i < DEOS_MAX_SUBSCRIPTIONS; i++) {
-        struct deos_subscription_entry entry;
+        struct deos_subscription_entry entry = {0};
         bool should_trigger = false;
 
         k_mutex_lock(&sub_lock, K_FOREVER);
@@ -276,6 +279,14 @@ void deos_subscription_process(void)
                             ret, entry.service, entry.command);
                     deos_fault_raise_for_node(entry.local_node, DEOS_FAULT_SUB_DISPATCH_FAILED, DEOS_FAULT_SEVERITY_WARNING);
                 }
+            } else if (entry.service == DEOS_SERVICE_SYSTEM && entry.command == DEOS_CMD_SYSTEM_HEARTBEAT) {
+                /* Built-in core heartbeat delivery to subscriber */
+                struct deos_heartbeat_payload hb_payload;
+                hb_payload.current_state = DEOS_STATE_READY;
+                deos_send_from_node(entry.local_node, entry.subscriber_node,
+                                    DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK,
+                                    DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_HEARTBEAT,
+                                    &hb_payload, sizeof(hb_payload));
             } else {
                 LOG_WRN("Registered subscription has no matching handler on node 0x%02X", entry.local_node);
                 deos_fault_raise_for_node(entry.local_node, DEOS_FAULT_SUB_HANDLER_NOT_FOUND, DEOS_FAULT_SEVERITY_ERROR);
@@ -425,6 +436,14 @@ int deos_subscription_notify_change_for_node(deos_node_id_t local_node,
             } else {
                 notified++;
             }
+        } else if (targets[i].service == DEOS_SERVICE_SYSTEM && targets[i].command == DEOS_CMD_SYSTEM_HEARTBEAT) {
+            struct deos_heartbeat_payload hb_payload;
+            hb_payload.current_state = DEOS_STATE_READY;
+            deos_send_from_node(targets[i].local_node, targets[i].subscriber_node,
+                                DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK,
+                                DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_HEARTBEAT,
+                                &hb_payload, sizeof(hb_payload));
+            notified++;
         } else {
             LOG_WRN("On-Change subscription has no matching handler on node 0x%02X", targets[i].local_node);
             deos_fault_raise_for_node(targets[i].local_node, DEOS_FAULT_SUB_HANDLER_NOT_FOUND, DEOS_FAULT_SEVERITY_ERROR);

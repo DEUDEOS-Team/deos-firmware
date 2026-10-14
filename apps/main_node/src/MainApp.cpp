@@ -173,6 +173,9 @@ void MainApp::run() {
 
     LOG_INF("Main System Controller (Brain) loop started.");
 
+    /* Kritik düğümlerin (BMS Main, BMS Aux, Traction, Brake, Steering) Heartbeat akışına abone ol */
+    network_monitor.subscribe_heartbeats();
+
     /* Sistemi hazır (STANDBY) moduna geçir */
     set_state(DEOS_STATE_STANDBY);
     
