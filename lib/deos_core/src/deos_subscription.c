@@ -1,4 +1,5 @@
 #include <deos/deos.h>
+#include <deos/deos_fault.h>
 #include "deos_internal.h"
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
@@ -54,11 +55,13 @@ void deos_subscription_handle_subscribe(const deos_message_t *msg)
 
     if (msg->destination == DEOS_NODE_GLOBAL_BROADCAST || msg->destination == DEOS_NODE_CAN_BROADCAST) {
         LOG_WRN("Broadcast subscribe from 0x%02X rejected", msg->source);
+        deos_fault_raise(DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
         return;
     }
 
     if (msg->payload_len < sizeof(struct deos_subscribe_req_payload)) {
         LOG_ERR("Invalid SUBSCRIBE payload length: %d", msg->payload_len);
+        deos_fault_raise_for_node(msg->destination, DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
         deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
         return;
     }
@@ -134,6 +137,7 @@ void deos_subscription_handle_subscribe(const deos_message_t *msg)
     if (target_slot == -1) {
         k_mutex_unlock(&sub_lock);
         LOG_WRN("Subscription table full on node 0x%02X", local_node);
+        deos_fault_raise_for_node(local_node, DEOS_FAULT_RX_QUEUE_OVERFLOW, DEOS_FAULT_SEVERITY_WARNING);
         struct deos_subscribe_resp_payload resp = {0};
         resp.result_code = DEOS_RESULT_BUSY;
         resp.target_service = req->target_service;
@@ -171,8 +175,15 @@ void deos_subscription_handle_unsubscribe(const deos_message_t *msg)
 {
     if (!msg) return;
 
+    if (msg->destination == DEOS_NODE_GLOBAL_BROADCAST || msg->destination == DEOS_NODE_CAN_BROADCAST) {
+        LOG_WRN("Broadcast unsubscribe from 0x%02X rejected", msg->source);
+        deos_fault_raise(DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
+        return;
+    }
+
     if (msg->payload_len < sizeof(struct deos_unsubscribe_req_payload)) {
         LOG_ERR("Invalid UNSUBSCRIBE payload length: %d", msg->payload_len);
+        deos_fault_raise_for_node(msg->destination, DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
         deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
         return;
     }
@@ -263,6 +274,7 @@ void deos_subscription_process(void)
                 }
             } else {
                 LOG_WRN("Registered subscription has no matching handler on node 0x%02X", entry.local_node);
+                deos_fault_raise_for_node(entry.local_node, DEOS_FAULT_INTERNAL_SOFTWARE_ERROR, DEOS_FAULT_SEVERITY_ERROR);
             }
         }
     }
@@ -279,6 +291,7 @@ int deos_subscribe_from_node(deos_node_id_t source_node, deos_node_id_t destinat
 
     if (destination == DEOS_NODE_GLOBAL_BROADCAST || destination == DEOS_NODE_CAN_BROADCAST) {
         LOG_ERR("Broadcast subscribe rejected");
+        deos_fault_raise_for_node(source_node, DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
         return -EINVAL;
     }
 
@@ -315,6 +328,12 @@ int deos_unsubscribe_from_node(deos_node_id_t source_node, deos_node_id_t destin
     if (!deos_is_local_node(source_node)) {
         LOG_ERR("Cannot unsubscribe from non-local node 0x%02X", source_node);
         return -EPERM;
+    }
+
+    if (destination == DEOS_NODE_GLOBAL_BROADCAST || destination == DEOS_NODE_CAN_BROADCAST) {
+        LOG_ERR("Broadcast unsubscribe rejected");
+        deos_fault_raise_for_node(source_node, DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
+        return -EINVAL;
     }
 
     struct deos_unsubscribe_req_payload req;
