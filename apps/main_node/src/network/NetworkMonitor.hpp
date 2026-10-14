@@ -10,7 +10,6 @@ public:
     
     void update_heartbeat(deos_node_id_t node_id, deos_state_t node_reported_state, deos_state_t expected_state);
     void check_watchdog(MainApp& app);
-    void broadcast_heartbeat(deos_state_t current_state, uint32_t ms_counter);
 
 private:
     int64_t last_heartbeat[256];

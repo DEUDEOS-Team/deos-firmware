@@ -18,7 +18,7 @@ extern "C" {
 #define DEOS_CANFD_DATA_BITRATE       2000000 /* 2 Mbps for Data Phase */
 
 /* Network Management */
-#define DEOS_HEARTBEAT_PERIOD_MS      1000    /* Nodes broadcast heartbeat every 1000ms */
+#define DEOS_HEARTBEAT_PERIOD_MS      1000    /* Nominal heartbeat interval when subscribed */
 #define DEOS_PING_TIMEOUT_MS          100     /* Max wait time for PONG */
 
 /* Common Header Layout */

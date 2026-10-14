@@ -193,9 +193,8 @@ void MainApp::run() {
         
         last_estop_state = estop_pressed;
 
-        /* --- NETWORK (NODE) WATCHDOG & HEARTBEAT --- */
+        /* --- NETWORK (NODE) WATCHDOG --- */
         network_monitor.check_watchdog(*this);
-        network_monitor.broadcast_heartbeat(current_state, ms_counter);
 
         /* --- STATE MACHINE (DURUM MAKİNESİ) Görselleri --- */
         led_controller.update(current_state, ms_counter);

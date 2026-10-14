@@ -54,15 +54,3 @@ void NetworkMonitor::check_watchdog(MainApp& app) {
         }
     }
 }
-
-void NetworkMonitor::broadcast_heartbeat(deos_state_t current_state, uint32_t ms_counter) {
-    /* Her 1000 ms'de bir tüm ağa kendi durumumuzu (State) Heartbeat olarak basarız */
-    if (ms_counter % DEOS_HEARTBEAT_PERIOD_MS == 0) {
-        struct deos_heartbeat_payload hb_payload;
-        hb_payload.current_state = current_state;
-        
-        deos_send(DEOS_NODE_CAN_BROADCAST, DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK, 
-                  DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_HEARTBEAT, 
-                  &hb_payload, sizeof(hb_payload));
-    }
-}
