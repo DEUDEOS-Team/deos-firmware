@@ -32,9 +32,9 @@
 }
 
 \title{\textbf{DEOS Fault Management \& Diagnostics ICD}\\
-\large Sürüm 1.1 -- DIAGNOSTIC Servisi ve Hata Yönetimi}
+\large Sürüm 1.2 -- DIAGNOSTIC Servisi ve Hata Yönetimi}
 \author{\textbf{Emir Arkalı} (\href{mailto:emirarkali07@gmail.com}{emirarkali07@gmail.com})\\DEOS -- Dokuz Eylül Otonom Sistemler}
-\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 13 Ekim 2026}
+\date{İlk Yayın: 28 Eylül 2026 \quad | \quad Son Revizyon: 15 Ekim 2026}
 
 \begin{document}
 
@@ -45,9 +45,9 @@
 \begin{tabularx}{\textwidth}{ll lX}
 \toprule
 \textbf{Doküman Tipi:} & Interface Control Document (ICD) & \textbf{Doküman Kodu:} & \code{DOC-ICD-DIAG-004} \\
-\textbf{Doküman Sürümü:} & Sürüm 1.1 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
+\textbf{Doküman Sürümü:} & Sürüm 1.2 & \textbf{Protokol Sürümü:} & v1.1 (\hex{11}) -- Medya Bağımsız \\
 \textbf{Yazar:} & Emir Arkalı (\texttt{emirarkali07@gmail.com}) & \textbf{Son Değiştiren:} & Emir Arkalı \\
-\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 13 Ekim 2026 \\
+\textbf{İlk Yayın Tarihi:} & 28 Eylül 2026 & \textbf{Son Revizyon Tarihi:} & 15 Ekim 2026 \\
 \textbf{Durum:} & Yürürlükte / Onaylandı & \textbf{Taşıma / Kapsam:} & DIAGNOSTIC Servisi (\hex{02}) \& Hata Kodları Registry \\
 \bottomrule
 \end{tabularx}
@@ -63,6 +63,7 @@
 v0.3 & 28 Eylül 2026 & Emir Arkalı & İlk taslak ve monolitik ICD v0.3 tanımı. \\
 v1.0 & 04 Ekim 2026 & Emir Arkalı & Hata yönetimi bağımsız doküman oluşturuldu. \\
 v1.1 & 13 Ekim 2026 & Emir Arkalı & Sürüm 1.1 standardizasyonu, kurumsal üstveri ve revizyon geçmişi eklendi. \\
+v1.2 & 15 Ekim 2026 & Emir Arkalı & Abonelik ve Ağ Yönetimi (Subscription Engine) spesifik hata kodları (\hex{0010}--\hex{0014}) eklendi. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -223,9 +224,30 @@ aynı anlamla kullanılmalıdır.
 0x0006 & TX Failure \\
 0x0007 & Protocol / Invalid Message Error \\
 0x0008 & Local Storage Error \\
+\midrule
+\multicolumn{2}{c}{\textbf{Abonelik ve Ağ Yönetimi (Subscription Engine)}} \\
+\midrule
+0x0010 & Subscription Table Full (Kapasite Aşımı) \\
+0x0011 & Subscription Broadcast Rejected (Geçersiz Hedef) \\
+0x0012 & Subscription Malformed Payload (Bozuk Paket) \\
+0x0013 & Subscription Handler Not Found (Kayıtsız Servis/Komut) \\
+0x0014 & Subscription Dispatch Failed (Sentetik İstek Hatası) \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+\subsubsection{Abonelik Hata Kodları Ayrıntıları}
+
+Abonelik motoru (\texttt{DEOS\_CMD\_SYSTEM\_SUBSCRIBE} ve \texttt{DEOS\_CMD\_SYSTEM\_UNSUBSCRIBE})
+çalışırken meydana gelebilecek protokol ve kapasite istisnaları aşağıdaki gibi sınıflandırılır:
+
+\begin{itemize}
+    \item \textbf{0x0010 -- Subscription Table Full}: Node üzerinde aynı anda tutulabilecek maksimum abonelik sayısı (\texttt{DEOS\_MAX\_SUBSCRIPTIONS}, varsayılan 8) aşıldığında üretilir. Abone olmak isteyen düğüme \texttt{DEOS\_RESULT\_BUSY} cevabı dönülür.
+    \item \textbf{0x0011 -- Subscription Broadcast Rejected}: Bir düğüm global broadcast (\hex{FF}) veya CAN broadcast (\hex{FE}) adresine subscribe veya unsubscribe isteği gönderdiğinde veya istemci API'sinden broadcast istendiğinde üretilir. Abonelikler kesinlikle unicast olmak zorundadır.
+    \item \textbf{0x0012 -- Subscription Malformed Payload}: Gelen subscribe veya unsubscribe mesajının data uzunluğu ICD standardında tanımlanan struct boyutundan küçük veya alanları geçersiz olduğunda üretilir.
+    \item \textbf{0x0013 -- Subscription Handler Not Found}: Abone olunmak istenen servis veya komut hedef node'un dispatcher tablosunda kayıtlı olmadığında veya periyodik tetiklenme anında handler kaybolduğunda üretilir.
+    \item \textbf{0x0014 -- Subscription Dispatch Failed}: Periyot zamanlayıcısı tetiklendiğinde uygulama katmanının kayıtlı callback'i negatif hata kodu döndürdüğünde veya yanıt iletimi başarısız olduğunda üretilir.
+\end{itemize}
 
 Bu tablo global bir fault sistemi oluşturmaz.
 

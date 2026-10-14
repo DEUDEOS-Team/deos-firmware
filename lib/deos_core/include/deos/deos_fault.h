@@ -23,7 +23,14 @@ typedef enum
     DEOS_FAULT_RX_QUEUE_OVERFLOW          = 0x0005,
     DEOS_FAULT_TX_FAILURE                 = 0x0006,
     DEOS_FAULT_PROTOCOL_ERROR             = 0x0007,
-    DEOS_FAULT_LOCAL_STORAGE_ERROR        = 0x0008
+    DEOS_FAULT_LOCAL_STORAGE_ERROR        = 0x0008,
+
+    /* Subscription Engine & Network Management Faults (0x0010 - 0x001F) */
+    DEOS_FAULT_SUB_TABLE_FULL             = 0x0010,
+    DEOS_FAULT_SUB_BROADCAST_REJECTED     = 0x0011,
+    DEOS_FAULT_SUB_MALFORMED_PAYLOAD      = 0x0012,
+    DEOS_FAULT_SUB_HANDLER_NOT_FOUND      = 0x0013,
+    DEOS_FAULT_SUB_DISPATCH_FAILED        = 0x0014
 } deos_common_fault_id_t;
 
 /*
