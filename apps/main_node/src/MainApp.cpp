@@ -54,6 +54,35 @@ extern "C" {
         return 0;
     }
 
+    int lighting_command_rx_callback(const deos_message_t *msg, void *user_data) {
+        MainApp& app = MainApp::getInstance();
+
+        if (msg->payload_len >= 1) {
+            uint8_t light_id = msg->payload[0];
+            bool turn_on = (msg->command == DEOS_CMD_LIGHTING_TURN_ON);
+
+            int ret = app.led_controller.set_light(light_id, turn_on);
+            if (ret == 0) {
+                struct deos_lighting_status_payload status = app.led_controller.get_status();
+                deos_send_response(msg, DEOS_RESULT_SUCCESS, &status, sizeof(status));
+                app.broadcast_lighting_status();
+            } else {
+                deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
+            }
+        } else {
+            LOG_WRN("Invalid LIGHTING command payload length: %d", msg->payload_len);
+            deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
+        }
+        return 0;
+    }
+
+    int lighting_get_status_rx_callback(const deos_message_t *msg, void *user_data) {
+        MainApp& app = MainApp::getInstance();
+        struct deos_lighting_status_payload status = app.led_controller.get_status();
+        deos_send_response(msg, DEOS_RESULT_SUCCESS, &status, sizeof(status));
+        return 0;
+    }
+
     deos_transport_t c_routing_policy(deos_node_id_t destination) {
         if (destination == DEOS_NODE_GROUND_CONTROL) {
             return DEOS_TRANSPORT_UART_LORA;
@@ -105,6 +134,11 @@ int MainApp::init() {
     /* SET_STATE komutunu (Cmd: 0x02, Class: COMMAND) dinle */
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE, set_state_rx_callback, NULL);
 
+    /* LIGHTING (0x08) komut ve durum sorgularını dinle */
+    deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_TURN_ON, lighting_command_rx_callback, NULL);
+    deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_TURN_OFF, lighting_command_rx_callback, NULL);
+    deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_GET_STATUS, lighting_get_status_rx_callback, NULL);
+
     EthTextual::getInstance().init();
     EthRosBridge::getInstance().init();
     UartLora::getInstance().init();
@@ -126,6 +160,12 @@ void MainApp::set_state(deos_state_t new_state) {
               DEOS_CMD_SYSTEM_SET_STATE, &current_state, sizeof(current_state));
 
     LOG_INF("System State changed to: %s", state_to_str(current_state));
+}
+
+void MainApp::broadcast_lighting_status() {
+    struct deos_lighting_status_payload status = led_controller.get_status();
+    deos_send(DEOS_NODE_CAN_BROADCAST, DEOS_PRIO_STATUS, DEOS_CLASS_STATUS, DEOS_SERVICE_LIGHTING,
+              DEOS_CMD_LIGHTING_STATUS, &status, sizeof(status));
 }
 
 void MainApp::run() {
@@ -159,6 +199,11 @@ void MainApp::run() {
 
         /* --- STATE MACHINE (DURUM MAKİNESİ) Görselleri --- */
         led_controller.update(current_state, ms_counter);
+
+        /* 1 Hz Periyodik Aydınlatma Durum Telemetrisi */
+        if (ms_counter % 1000 == 0) {
+            broadcast_lighting_status();
+        }
 
         ms_counter += 10;
         k_sleep(K_MSEC(10));

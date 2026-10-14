@@ -122,7 +122,8 @@ typedef enum {
     DEOS_SERVICE_BMS          = 0x04,
     DEOS_SERVICE_CALIBRATION  = 0x05,
     DEOS_SERVICE_DIAGNOSTIC   = 0x06,
-    DEOS_SERVICE_SENSORS      = 0x07
+    DEOS_SERVICE_SENSORS      = 0x07,
+    DEOS_SERVICE_LIGHTING     = 0x08
 } deos_service_id_t;
 
 /*
@@ -281,6 +282,37 @@ typedef enum {
 typedef enum {
     DEOS_CMD_SENSOR_IMU_DATA   = 0x01
 } deos_sensors_command_t;
+
+/*
+ * LIGHTING Commands
+ */
+typedef enum {
+    DEOS_CMD_LIGHTING_TURN_ON    = 0x01, /* Far Ac */
+    DEOS_CMD_LIGHTING_TURN_OFF   = 0x02, /* Far Kapat */
+    DEOS_CMD_LIGHTING_GET_STATUS = 0x03, /* Durum Sorgula (REQUEST) */
+    DEOS_CMD_LIGHTING_STATUS     = 0x04  /* Durum Telemetrisi (STATUS/RESPONSE) */
+} deos_lighting_command_t;
+
+/*
+ * LIGHTING Far ID Registry
+ */
+typedef enum {
+    DEOS_LIGHT_HEADLIGHT  = 0x01, /* On Farlar */
+    DEOS_LIGHT_BRAKE      = 0x02, /* Fren Lambasi */
+    DEOS_LIGHT_TURN_LEFT  = 0x03, /* Sol Sinyal */
+    DEOS_LIGHT_TURN_RIGHT = 0x04, /* Sag Sinyal */
+    DEOS_LIGHT_ALL        = 0xFF  /* Tum Isiklar */
+} deos_light_id_t;
+
+/*
+ * LIGHTING Durum Kodlari
+ */
+typedef enum {
+    DEOS_LIGHT_STATE_OFF      = 0x00, /* Kapali */
+    DEOS_LIGHT_STATE_ON       = 0x01, /* Acik (Surekli yanan) */
+    DEOS_LIGHT_STATE_BLINKING = 0x02, /* Yanip sonuyor (Flasor) */
+    DEOS_LIGHT_STATE_FAULT    = 0x03  /* Ariza (Acik/kisa devre) */
+} deos_light_state_t;
 
 /*
  * Parameter Commands

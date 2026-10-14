@@ -226,6 +226,18 @@ struct deos_sensor_imu_payload {
     int16_t mag_z;
 } __attribute__((packed));
 
+/*
+ * LIGHTING Status Payload
+ */
+struct deos_lighting_status_payload {
+    uint8_t headlight_state;   /* deos_light_state_t (0: OFF, 1: ON, 2: BLINKING, 3: FAULT) */
+    uint8_t brake_light_state; /* deos_light_state_t */
+    uint8_t turn_left_state;   /* deos_light_state_t */
+    uint8_t turn_right_state;  /* deos_light_state_t */
+    uint8_t hazard_state;      /* deos_light_state_t */
+    uint8_t fault_flags;       /* Bitmask: b0=Headlight, b1=Brake, b2=TurnL, b3=TurnR */
+} __attribute__((packed));
+
 #ifdef __cplusplus
 }
 #endif

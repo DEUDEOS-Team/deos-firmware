@@ -16,6 +16,10 @@ public:
     void set_state(deos_state_t new_state);
     
     NetworkMonitor network_monitor;
+    LedController led_controller;
+    SafetyManager safety_manager;
+
+    void broadcast_lighting_status();
 
 private:
     MainApp() = default;
@@ -24,9 +28,4 @@ private:
     // Non-copyable
     MainApp(const MainApp&) = delete;
     MainApp& operator=(const MainApp&) = delete;
-
-
-
-    LedController led_controller;
-    SafetyManager safety_manager;
 };
