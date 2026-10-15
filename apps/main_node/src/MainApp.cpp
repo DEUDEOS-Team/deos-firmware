@@ -159,6 +159,10 @@ void MainApp::set_state(deos_state_t new_state) {
     deos_send(DEOS_NODE_GLOBAL_BROADCAST, prio, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, 
               DEOS_CMD_SYSTEM_SET_STATE, &current_state, sizeof(current_state));
 
+    /* Durum değiştiğinde aydınlatma durumunu da güncelle ve yayınla */
+    led_controller.update(current_state, k_uptime_get_32());
+    broadcast_lighting_status();
+
     LOG_INF("System State changed to: %s", state_to_str(current_state));
 }
 
@@ -201,11 +205,6 @@ void MainApp::run() {
 
         /* --- STATE MACHINE (DURUM MAKİNESİ) Görselleri --- */
         led_controller.update(current_state, ms_counter);
-
-        /* 1 Hz Periyodik Aydınlatma Durum Telemetrisi */
-        if (ms_counter % 1000 == 0) {
-            broadcast_lighting_status();
-        }
 
         ms_counter += 10;
         k_sleep(K_MSEC(10));
