@@ -12,27 +12,79 @@ def tprint(*args, **kwargs):
 # DEOS Node IDs
 DEOS_NODE_GROUND_CONTROL = 0x02
 DEOS_NODE_MAIN_STM32 = 0x03
+DEOS_NODE_TRACTION = 0x10
+DEOS_NODE_STEERING = 0x11
+DEOS_NODE_BRAKE = 0x12
 DEOS_NODE_BMS_MAIN = 0x20
 DEOS_NODE_BMS_AUX = 0x21
 DEOS_NODE_BMS_GATEWAY = 0x30
 
 # DEOS Priorities
+DEOS_PRIO_CONTROL = 2
 DEOS_PRIO_STATUS = 3
+DEOS_PRIO_CONFIG = 4
 DEOS_PRIO_NETWORK = 5
 
 # DEOS Classes
-DEOS_CLASS_REQUEST = 0x4
-DEOS_CLASS_NETWORK = 0x7
+DEOS_CLASS_COMMAND = 0x01
+DEOS_CLASS_STATUS = 0x03
+DEOS_CLASS_REQUEST = 0x04
+DEOS_CLASS_RESPONSE = 0x05
+DEOS_CLASS_NETWORK = 0x07
 
 # DEOS Services
 DEOS_SERVICE_SYSTEM = 0x00
+DEOS_SERVICE_TRACTION = 0x01
+DEOS_SERVICE_STEERING = 0x02
+DEOS_SERVICE_BRAKE = 0x03
 DEOS_SERVICE_BMS = 0x04
+DEOS_SERVICE_SAFETY = 0x05
+DEOS_SERVICE_DIAGNOSTIC = 0x06
+DEOS_SERVICE_SENSORS = 0x07
+DEOS_SERVICE_LIGHTING = 0x08
 
 # DEOS Commands
+DEOS_CMD_SYSTEM_GET_STATE = 0x01
+DEOS_CMD_SYSTEM_SET_STATE = 0x02
+DEOS_CMD_SYSTEM_HEARTBEAT = 0x07
 DEOS_CMD_SYSTEM_PING = 0x08
+DEOS_CMD_SYSTEM_PONG = 0x09
+DEOS_CMD_SYSTEM_SUBSCRIBE = 0x0A
+DEOS_CMD_SYSTEM_UNSUBSCRIBE = 0x0B
+DEOS_CMD_SYSTEM_GET_SUBSCRIPTIONS = 0x0C
+
 DEOS_CMD_BMS_GET_STATUS = 0x01
+DEOS_CMD_BMS_STATUS = 0x02
 DEOS_CMD_BMS_GET_CELL_VOLTAGES = 0x03
+DEOS_CMD_BMS_CELL_VOLTAGES = 0x04
 DEOS_CMD_BMS_GET_BALANCING = 0x07
+DEOS_CMD_BMS_BALANCING = 0x08
+
+DEOS_INTERVAL_ON_CHANGE = 0xFFFF
+
+# DEOS Result Codes
+RESULT_CODES = {
+    0x00: "SUCCESS",
+    0x01: "UNSUPPORTED",
+    0x02: "INVALID_PARAMETER",
+    0x03: "OUT_OF_RANGE",
+    0x04: "NOT_ALLOWED",
+    0x05: "BUSY",
+    0x06: "NOT_READY",
+    0x07: "INTERNAL_ERROR"
+}
+
+# State Definitions
+STATE_NAMES = {
+    0x00: "INIT",
+    0x01: "STANDBY",
+    0x02: "READY",
+    0x03: "ACTIVE",
+    0x04: "CALIBRATING",
+    0x05: "SAFE",
+    0x06: "FAULT",
+    0xFF: "UNKNOWN"
+}
 
 # UART LORA Protocol Constants
 LORA_MAGIC_1 = 0xAA
@@ -88,6 +140,28 @@ class DeosLoraDummy:
         self.seq = (self.seq + 1) & 0xFF
         full_payload = header + payload
         self.send_lora_frame(LORA_FLAG_NONE, full_payload)
+
+    def subscribe(self, dest_node, target_service, target_command, interval_ms=1000, lease_ttl_s=0):
+        """
+        ICD v1.1 Telemetri/Durum Aboneliği (SUBSCRIBE):
+        - target_service: Abone olunmak istenen servis (DEOS_SERVICE_SYSTEM, BMS, vb.)
+        - target_command: Abone olunmak istenen komut (HEARTBEAT, BMS_GET_STATUS, vb.)
+        - interval_ms: İstenen periyot (0=iptal, 10-65534=ms cinsinden periyot, 0xFFFF=On-Change)
+        - lease_ttl_s: Kira süresi (saniye). 0 = Sonsuz.
+        """
+        payload = struct.pack('<BBHH', target_service, target_command, interval_ms, lease_ttl_s)
+        tprint(f"[TX] SUBSCRIBE -> Node 0x{dest_node:02X} | Svc: 0x{target_service:02X}, Cmd: 0x{target_command:02X}, Interval: {interval_ms} ms, TTL: {lease_ttl_s} s")
+        self.send_message(dest_node, DEOS_PRIO_CONTROL, DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SUBSCRIBE, payload)
+
+    def unsubscribe(self, dest_node, target_service=0xFF, target_command=0xFF):
+        """
+        ICD v1.1 Abonelik İptali (UNSUBSCRIBE):
+        - target_service: 0xFF ise o node'daki tüm servisler
+        - target_command: 0xFF ise servise ait tüm komutlar
+        """
+        payload = struct.pack('<BB', target_service, target_command)
+        tprint(f"[TX] UNSUBSCRIBE -> Node 0x{dest_node:02X} | Svc: 0x{target_service:02X}, Cmd: 0x{target_command:02X}")
+        self.send_message(dest_node, DEOS_PRIO_CONTROL, DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_UNSUBSCRIBE, payload)
 
     def rx_thread(self):
         state = 0
@@ -153,15 +227,45 @@ class DeosLoraDummy:
         prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
         msg_payload = payload[8:]
         
-        if service == DEOS_SERVICE_SYSTEM and cmd == 0x09: # PONG
+        # PONG
+        if service == DEOS_SERVICE_SYSTEM and cmd == DEOS_CMD_SYSTEM_PONG:
             tprint(f"[RX] PONG (Node 0x{src:02X})")
             
-        elif service == DEOS_SERVICE_BMS and cmd == 0x02: # BMS_STATUS
+        # HEARTBEAT
+        elif service == DEOS_SERVICE_SYSTEM and cmd == DEOS_CMD_SYSTEM_HEARTBEAT:
+            if len(msg_payload) >= 1:
+                st = msg_payload[0]
+                st_name = STATE_NAMES.get(st, f"0x{st:02X}")
+                tprint(f"[RX] HEARTBEAT (Node 0x{src:02X}) -> State: {st_name}")
+            else:
+                tprint(f"[RX] HEARTBEAT (Node 0x{src:02X}) -> (Payload yok)")
+
+        # SUBSCRIBE RESPONSE
+        elif service == DEOS_SERVICE_SYSTEM and cmd == DEOS_CMD_SYSTEM_SUBSCRIBE:
+            if msg_class == DEOS_CLASS_RESPONSE and len(msg_payload) >= 5:
+                res, s_svc, s_cmd, actual_interval = struct.unpack('<BBBH', msg_payload[:5])
+                res_name = RESULT_CODES.get(res, f"UNKNOWN(0x{res:02X})")
+                tprint(f"[RX] SUBSCRIBE YANITI (Node 0x{src:02X}): Sonuc = {res_name}, Svc: 0x{s_svc:02X}, Cmd: 0x{s_cmd:02X}, Interval: {actual_interval} ms")
+            elif msg_class == DEOS_CLASS_RESPONSE and len(msg_payload) >= 1:
+                res = msg_payload[0]
+                res_name = RESULT_CODES.get(res, f"UNKNOWN(0x{res:02X})")
+                tprint(f"[RX] SUBSCRIBE YANITI (Node 0x{src:02X}): Sonuc = {res_name}")
+
+        # UNSUBSCRIBE RESPONSE
+        elif service == DEOS_SERVICE_SYSTEM and cmd == DEOS_CMD_SYSTEM_UNSUBSCRIBE:
+            if msg_class == DEOS_CLASS_RESPONSE and len(msg_payload) >= 1:
+                res = msg_payload[0]
+                res_name = RESULT_CODES.get(res, f"UNKNOWN(0x{res:02X})")
+                tprint(f"[RX] UNSUBSCRIBE YANITI (Node 0x{src:02X}): Sonuc = {res_name}")
+
+        # BMS STATUS
+        elif service == DEOS_SERVICE_BMS and (cmd == DEOS_CMD_BMS_STATUS or cmd == DEOS_CMD_BMS_GET_STATUS):
             if len(msg_payload) >= 16:
                 pack_v, pack_i, soc, temp, min_cv, max_cv, nom_v, cell_c, temp_c = struct.unpack('<HhHhHHHBB', msg_payload[:16])
                 tprint(f"[RX] BMS STATUS (Node 0x{src:02X}): Pack V: {pack_v} mV, I: {pack_i} cA, SOC: {soc/10} %, Cells: {cell_c}")
                 
-        elif service == DEOS_SERVICE_BMS and cmd == 0x04: # CELL_VOLTAGE
+        # BMS CELL VOLTAGE
+        elif service == DEOS_SERVICE_BMS and (cmd == DEOS_CMD_BMS_CELL_VOLTAGES or cmd == DEOS_CMD_BMS_GET_CELL_VOLTAGES):
             if len(msg_payload) >= 3:
                 idx, vol = struct.unpack('<BH', msg_payload[:3])
                 if idx == 0:
@@ -169,7 +273,8 @@ class DeosLoraDummy:
                 else:
                     tprint(f"[RX] BMS CELL VOLTAGE (Node 0x{src:02X}): Hücre {idx} = {vol} mV")
                     
-        elif service == DEOS_SERVICE_BMS and cmd == 0x08: # BALANCING
+        # BMS BALANCING
+        elif service == DEOS_SERVICE_BMS and (cmd == DEOS_CMD_BMS_BALANCING or cmd == DEOS_CMD_BMS_GET_BALANCING):
             if len(msg_payload) >= 2:
                 idx, st = struct.unpack('<BB', msg_payload[:2])
                 if idx == 0:
@@ -183,36 +288,32 @@ class DeosLoraDummy:
         t = threading.Thread(target=self.rx_thread, daemon=True)
         t.start()
         
-        loop_counter = 0
         try:
             tprint("--- LoRa Dummy Diagnostic Tool Başlatıldı ---")
-            tprint("Tüm mesajlar art arda (100ms aralıklarla) gönderilecek...\n")
+            tprint("Ana Düğüme (Main STM32) HEARTBEAT aboneliği başlatılıyor (1000 ms, TTL=0)...")
+            self.subscribe(DEOS_NODE_MAIN_STM32, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_HEARTBEAT, interval_ms=1000, lease_ttl_s=0)
+            time.sleep(0.5)
+
+            tprint("BMS Düğümüne (BMS Main) GET_STATUS aboneliği başlatılıyor (1000 ms, TTL=0)...")
+            self.subscribe(DEOS_NODE_BMS_MAIN, DEOS_SERVICE_BMS, DEOS_CMD_BMS_GET_STATUS, interval_ms=1000, lease_ttl_s=0)
+            
             while True:
-                tprint("\n[TX] Ana Node (Main STM32) PING atılıyor...")
-                ping_payload = struct.pack('<I', 0xDEADBEEF) # 4 bytelık ping_id
+                tprint("\n[TX] Periyodik PING atılıyor...")
+                ping_payload = struct.pack('<I', 0xDEADBEEF)
                 self.send_message(DEOS_NODE_MAIN_STM32, DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_PING, ping_payload)
-                time.sleep(0.1)
-
-                # tprint("[TX] BMS Node'larına PING atılıyor...")
-                # self.send_message(DEOS_NODE_BMS_MAIN, DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_PING)
-                # time.sleep(0.1)
-
-                # tprint("[TX] BMS GET_STATUS atılıyor...")
-                # self.send_message(DEOS_NODE_BMS_MAIN, DEOS_PRIO_STATUS, DEOS_CLASS_REQUEST, DEOS_SERVICE_BMS, DEOS_CMD_BMS_GET_STATUS)
-                # time.sleep(0.1)
-
-                # tprint("[TX] BMS GET_CELL_VOLTAGES atılıyor...")
-                # self.send_message(DEOS_NODE_BMS_MAIN, DEOS_PRIO_STATUS, DEOS_CLASS_REQUEST, DEOS_SERVICE_BMS, DEOS_CMD_BMS_GET_CELL_VOLTAGES)
-                # time.sleep(0.1)
-
-                # tprint("[TX] BMS GET_BALANCING atılıyor...")
-                # self.send_message(DEOS_NODE_BMS_MAIN, DEOS_PRIO_STATUS, DEOS_CLASS_REQUEST, DEOS_SERVICE_BMS, DEOS_CMD_BMS_GET_BALANCING)
                 
-                tprint("Bekleniyor (2 saniye)...")
-                time.sleep(2)
+                tprint("Abonelik akışı ve ping yanıtları dinleniyor (3 saniye)...")
+                time.sleep(3)
                 
         except KeyboardInterrupt:
-            tprint("\nÇıkış yapılıyor...")
+            tprint("\nÇıkış yapılıyor, abonelikler iptal ediliyor...")
+            try:
+                self.unsubscribe(DEOS_NODE_MAIN_STM32, 0xFF, 0xFF)
+                time.sleep(0.1)
+                self.unsubscribe(DEOS_NODE_BMS_MAIN, 0xFF, 0xFF)
+                time.sleep(0.2)
+            except:
+                pass
             self.running = False
             self.ser.close()
 
