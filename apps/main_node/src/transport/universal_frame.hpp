@@ -110,6 +110,67 @@ static inline int deos_universal_frame_decode(const uint8_t *buf, size_t frame_l
     return 0;
 }
 
+static inline const char *deos_node_name(uint8_t node_id) {
+    switch (node_id) {
+        case DEOS_NODE_INVALID:          return "INVALID";
+        case DEOS_NODE_TEXTUAL:          return "TEXTUAL";
+        case DEOS_NODE_GROUND_CONTROL:   return "GROUND_CONTROL";
+        case DEOS_NODE_MAIN_STM32:       return "MAIN_STM32";
+        case DEOS_NODE_ROS_BRIDGE:       return "ROS_BRIDGE";
+        case DEOS_NODE_TRACTION:         return "TRACTION";
+        case DEOS_NODE_STEERING:         return "STEERING";
+        case DEOS_NODE_BRAKE:            return "BRAKE";
+        case DEOS_NODE_IMU:              return "IMU";
+        case DEOS_NODE_BMS_MAIN:         return "BMS_MAIN";
+        case DEOS_NODE_BMS_AUX:          return "BMS_AUX";
+        case DEOS_NODE_BMS_GATEWAY:      return "BMS_GATEWAY";
+        case DEOS_NODE_DIAG_TOOL:        return "DIAG_TOOL";
+        case DEOS_NODE_CAN_BROADCAST:    return "CAN_BROADCAST";
+        case DEOS_NODE_GLOBAL_BROADCAST: return "GLOBAL_BROADCAST";
+        default:                         return "UNKNOWN_NODE";
+    }
+}
+
+static inline const char *deos_transport_name(uint8_t transport) {
+    switch (transport) {
+        case DEOS_TRANSPORT_LOCAL:          return "LOCAL";
+        case DEOS_TRANSPORT_CAN_FD:         return "CAN_FD";
+        case DEOS_TRANSPORT_ETH_TEXTUAL:    return "ETH_TEXTUAL";
+        case DEOS_TRANSPORT_ETH_ROS_BRIDGE: return "ETH_ROS_BRIDGE";
+        case DEOS_TRANSPORT_UART_LORA:      return "UART_LORA";
+        default:                            return "UNKNOWN_TRP";
+    }
+}
+
+static inline const char *deos_service_name(uint8_t service) {
+    switch (service) {
+        case DEOS_SERVICE_SYSTEM:     return "SYSTEM";
+        case DEOS_SERVICE_TRACTION:   return "TRACTION";
+        case DEOS_SERVICE_STEERING:   return "STEERING";
+        case DEOS_SERVICE_BRAKE:      return "BRAKE";
+        case DEOS_SERVICE_BMS:          return "BMS";
+        case DEOS_SERVICE_CALIBRATION:  return "CALIBRATION";
+        case DEOS_SERVICE_DIAGNOSTIC:   return "DIAGNOSTIC";
+        case DEOS_SERVICE_SENSORS:    return "SENSORS";
+        case DEOS_SERVICE_LIGHTING:   return "LIGHTING";
+        default:                      return "UNKNOWN_SVC";
+    }
+}
+
+static inline const char *deos_class_name(uint8_t msg_class) {
+    switch (msg_class) {
+        case DEOS_CLASS_SAFETY:   return "SAFETY";
+        case DEOS_CLASS_COMMAND:  return "COMMAND";
+        case DEOS_CLASS_STATUS:   return "STATUS";
+        case DEOS_CLASS_EVENT:    return "EVENT";
+        case DEOS_CLASS_REQUEST:  return "REQUEST";
+        case DEOS_CLASS_RESPONSE: return "RESPONSE";
+        case DEOS_CLASS_CONFIG:   return "CONFIG";
+        case DEOS_CLASS_NETWORK:  return "NETWORK";
+        default:                  return "UNKNOWN_CLS";
+    }
+}
+
 #ifdef __cplusplus
 }
 #endif

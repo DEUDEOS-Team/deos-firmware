@@ -1,4 +1,5 @@
 #include <deos/deos.h>
+#include <deos/deos_fault.h>
 #include "deos_internal.h"
 #include <zephyr/logging/log.h>
 #include <errno.h>
@@ -10,6 +11,40 @@ static deos_transport_tx_fn_t transport_tx_registry[DEOS_TRANSPORT_COUNT];
 
 /* Application-defined routing policy lookup */
 static deos_router_lookup_fn_t app_route_lookup = NULL;
+
+static const char *router_node_name(uint8_t id)
+{
+    switch (id) {
+        case DEOS_NODE_INVALID:          return "INVALID";
+        case DEOS_NODE_TEXTUAL:          return "TEXTUAL";
+        case DEOS_NODE_GROUND_CONTROL:   return "GROUND_CONTROL";
+        case DEOS_NODE_MAIN_STM32:       return "MAIN_STM32";
+        case DEOS_NODE_ROS_BRIDGE:       return "ROS_BRIDGE";
+        case DEOS_NODE_TRACTION:         return "TRACTION";
+        case DEOS_NODE_STEERING:         return "STEERING";
+        case DEOS_NODE_BRAKE:            return "BRAKE";
+        case DEOS_NODE_IMU:              return "IMU";
+        case DEOS_NODE_BMS_MAIN:         return "BMS_MAIN";
+        case DEOS_NODE_BMS_AUX:          return "BMS_AUX";
+        case DEOS_NODE_BMS_GATEWAY:      return "BMS_GATEWAY";
+        case DEOS_NODE_DIAG_TOOL:        return "DIAG_TOOL";
+        case DEOS_NODE_CAN_BROADCAST:    return "CAN_BROADCAST";
+        case DEOS_NODE_GLOBAL_BROADCAST: return "GLOBAL_BROADCAST";
+        default:                         return "UNKNOWN";
+    }
+}
+
+static const char *router_transport_name(deos_transport_t trp)
+{
+    switch (trp) {
+        case DEOS_TRANSPORT_LOCAL:          return "LOCAL";
+        case DEOS_TRANSPORT_CAN_FD:         return "CAN_FD";
+        case DEOS_TRANSPORT_ETH_TEXTUAL:    return "ETH_TEXTUAL";
+        case DEOS_TRANSPORT_ETH_ROS_BRIDGE: return "ETH_ROS_BRIDGE";
+        case DEOS_TRANSPORT_UART_LORA:      return "UART_LORA";
+        default:                            return "UNKNOWN_TRP";
+    }
+}
 
 void deos_router_set_lookup_fn(deos_router_lookup_fn_t lookup_fn)
 {
@@ -32,14 +67,17 @@ int deos_router_register_transport(deos_transport_t transport, deos_transport_tx
         return -EINVAL;
     }
     transport_tx_registry[transport] = tx_fn;
-    LOG_DBG("Registered TX callback for transport %d", transport);
+    LOG_DBG("Registered TX callback for transport %s (%d)", router_transport_name(transport), transport);
     return 0;
 }
 
 void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_transport)
 {
-    LOG_INF("Router RX -> Src: 0x%02X, Dst: 0x%02X, Cmd: 0x%02X, Len: %d (via %d)", 
-            msg->source, msg->destination, msg->command, msg->payload_len, incoming_transport);
+    LOG_INF("Router RX: [%s (0x%02X) -> %s (0x%02X)] Cmd: 0x%02X, Len: %d (via %s)",
+            router_node_name(msg->source), msg->source,
+            router_node_name(msg->destination), msg->destination,
+            msg->command, msg->payload_len,
+            router_transport_name(incoming_transport));
 
     if (msg->destination == DEOS_NODE_GLOBAL_BROADCAST) {
         /* Route to all registered transports EXCEPT the one it came from (Loop Prevention) */
@@ -75,15 +113,21 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
         target_transport != incoming_transport &&
         transport_tx_registry[target_transport] != NULL) {
         
-        LOG_DBG("Routing message from 0x%02X to 0x%02X via %d",
-                 msg->source, msg->destination, target_transport);
+        LOG_DBG("Router FWD: [%s (0x%02X) -> %s (0x%02X)] via %s",
+                router_node_name(msg->source), msg->source,
+                router_node_name(msg->destination), msg->destination,
+                router_transport_name(target_transport));
         transport_tx_registry[target_transport](msg);
     } else {
         if (target_transport == incoming_transport) {
-            LOG_DBG("Router: Skipping loopback for destination 0x%02X", msg->destination);
+            LOG_DBG("Router: Skipping loopback for %s (0x%02X) via %s",
+                    router_node_name(msg->destination), msg->destination,
+                    router_transport_name(incoming_transport));
         } else {
-            LOG_WRN("Router: Dropping message to 0x%02X (No TX callback for transport %d)", 
-                    msg->destination, target_transport);
+            LOG_WRN("Router DROP: Mesaj iletilemedi! Hedef: %s (0x%02X) | Hat: %s (%d) (Aktif TX callback yok)", 
+                    router_node_name(msg->destination), msg->destination,
+                    router_transport_name(target_transport), target_transport);
+            deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
         }
     }
 }

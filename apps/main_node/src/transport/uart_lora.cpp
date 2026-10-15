@@ -129,11 +129,12 @@ void UartLora::tx_thread() {
     while (1) {
         if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
             send_deos_lora(LORA_FLAG_NONE, &msg);
-            const char* class_str = (msg.message_class == DEOS_CLASS_COMMAND) ? "COMMAND" : 
-                                    (msg.message_class == DEOS_CLASS_RESPONSE) ? "RESPONSE" : 
-                                    (msg.message_class == DEOS_CLASS_NETWORK) ? "NETWORK" : "OTHER";
-            LOG_INF("LoRa [TRANSMIT - GIDEN]: STM32'den Havaya paket firlatildi! (Class: %s, Dst: 0x%02X, Cmd: 0x%02X, Payload: %d byte)", 
-                    class_str, msg.destination, msg.command, msg.payload_len);
+            LOG_INF("LoRa TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d", 
+                    deos_node_name(msg.source), msg.source,
+                    deos_node_name(msg.destination), msg.destination,
+                    deos_class_name(msg.message_class),
+                    deos_service_name(msg.service),
+                    msg.command, msg.payload_len);
         }
     }
 }
@@ -203,7 +204,7 @@ void UartLora::rx_thread() {
                         if (rx_flag == LORA_FLAG_ACK_REQ) {
                             uint8_t ack_payload[2] = { static_cast<uint8_t>(calc_crc & 0xFF), static_cast<uint8_t>((calc_crc >> 8) & 0xFF) };
                             send_lora_frame(LORA_FLAG_IS_ACK, ack_payload, 2);
-                            LOG_INF("uart_lora: Sent ACK for valid packet (CRC 0x%04X)", calc_crc);
+                            LOG_INF("LoRa ACK TX: Gelen pakete ACK yollandi (CRC 0x%04X)", calc_crc);
                         }
                         
                         if (rx_flag != LORA_FLAG_IS_ACK) {
@@ -211,8 +212,12 @@ void UartLora::rx_thread() {
                                 deos_message_t msg;
                                 int ret = deos_universal_frame_decode(rx_buf, rx_len, &msg);
                                 if (ret == 0) {
-                                    LOG_INF("LoRa [RECEIVED - GELEN]: Havadan STM32'ye paket ulasti! (Src: 0x%02X, Dst: 0x%02X, Cmd: 0x%02X, Payload: %d byte). Router'a iletiliyor...",
-                                            msg.source, msg.destination, msg.command, msg.payload_len);
+                                    LOG_INF("LoRa RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
+                                            deos_node_name(msg.source), msg.source,
+                                            deos_node_name(msg.destination), msg.destination,
+                                            deos_class_name(msg.message_class),
+                                            deos_service_name(msg.service),
+                                            msg.command, msg.payload_len);
                                     deos_feed_message(&msg, DEOS_TRANSPORT_UART_LORA);
                                 } else {
                                     LOG_WRN("LoRa [HATA]: Havadan gelen universal frame cozulemedi: %d", ret);

@@ -2,6 +2,7 @@
 #include "transport/eth_textual.hpp"
 #include "transport/eth_ros_bridge.hpp"
 #include "transport/uart_lora.hpp"
+#include "transport/universal_frame.hpp"
 #include "io/ImuSensor.hpp"
 #include <zephyr/logging/log.h>
 
@@ -44,7 +45,8 @@ extern "C" {
         
         if (msg->payload_len == 1) {
             deos_state_t req_state = (deos_state_t)msg->payload[0];
-            LOG_INF("Received SET_STATE command from Node 0x%02X: requesting state %s", msg->source, state_to_str(req_state));
+            LOG_INF("Received SET_STATE command from %s (0x%02X): requesting state %s", 
+                    deos_node_name(msg->source), msg->source, state_to_str(req_state));
             app.set_state(req_state);
             deos_send_response(msg, DEOS_RESULT_SUCCESS, NULL, 0);
         } else {
@@ -60,6 +62,9 @@ extern "C" {
         if (msg->payload_len >= 1) {
             uint8_t light_id = msg->payload[0];
             bool turn_on = (msg->command == DEOS_CMD_LIGHTING_TURN_ON);
+
+            LOG_INF("Lighting Cmd RX from %s (0x%02X): Light ID %d -> %s",
+                    deos_node_name(msg->source), msg->source, light_id, turn_on ? "ON" : "OFF");
 
             int ret = app.led_controller.set_light(light_id, turn_on);
             if (ret == 0) {
@@ -90,14 +95,10 @@ extern "C" {
             return DEOS_TRANSPORT_ETH_ROS_BRIDGE;
         } else if (destination == DEOS_NODE_DIAG_TOOL) {
             return DEOS_TRANSPORT_ETH_TEXTUAL;
-        }
-        /* UART/LoRa testleri esnasinda CAN FD'ye gonderip sistemi kitlememesi icin kapali */
-        /*
-        else if (destination >= DEOS_NODE_TRACTION && destination <= DEOS_NODE_BMS_GATEWAY) {
+        } else if (destination >= DEOS_NODE_TRACTION && destination <= DEOS_NODE_BMS_GATEWAY) {
             return DEOS_TRANSPORT_CAN_FD;
         }
-        */
-        return DEOS_TRANSPORT_LOCAL;
+        return DEOS_TRANSPORT_UNKNOWN;
     }
 }
 

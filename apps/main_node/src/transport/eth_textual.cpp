@@ -69,6 +69,13 @@ void EthTextual::tx_thread() {
                         LOG_ERR("TCP Send failed (%d), dropping client", errno);
                         zsock_close(m_active_client_sock);
                         m_active_client_sock = -1;
+                    } else {
+                        LOG_INF("Textual UI TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
+                                deos_node_name(msg.source), msg.source,
+                                deos_node_name(msg.destination), msg.destination,
+                                deos_class_name(msg.message_class),
+                                deos_service_name(msg.service),
+                                msg.command, msg.payload_len);
                     }
                 } else {
                     LOG_ERR("Failed to encode universal frame for Textual: %d", encoded_len);
@@ -190,6 +197,12 @@ void EthTextual::server_thread() {
                     deos_message_t msg;
                     int decode_ret = deos_universal_frame_decode(frame_buf, rx_len, &msg);
                     if (decode_ret == 0) {
+                        LOG_INF("Textual UI RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
+                                deos_node_name(msg.source), msg.source,
+                                deos_node_name(msg.destination), msg.destination,
+                                deos_class_name(msg.message_class),
+                                deos_service_name(msg.service),
+                                msg.command, msg.payload_len);
                         deos_feed_message(&msg, DEOS_TRANSPORT_ETH_TEXTUAL);
                     } else {
                         LOG_WRN("Failed to decode Textual universal frame: %d", decode_ret);

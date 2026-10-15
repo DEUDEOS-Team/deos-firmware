@@ -61,6 +61,13 @@ void EthRosBridge::tx_thread() {
                                             sizeof(m_client_addr));
                     if (sent < 0) {
                         LOG_ERR("UDP Send failed (%d)", errno);
+                    } else {
+                        LOG_INF("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
+                                deos_node_name(msg.source), msg.source,
+                                deos_node_name(msg.destination), msg.destination,
+                                deos_class_name(msg.message_class),
+                                deos_service_name(msg.service),
+                                msg.command, msg.payload_len);
                     }
                 } else {
                     LOG_ERR("Failed to encode universal frame for ROS bridge: %d", encoded_len);
@@ -131,6 +138,12 @@ void EthRosBridge::rx_thread() {
         deos_message_t msg;
         int ret = deos_universal_frame_decode(rx_buf + 1, rx_len, &msg);
         if (ret == 0) {
+            LOG_INF("ROS Bridge RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
+                    deos_node_name(msg.source), msg.source,
+                    deos_node_name(msg.destination), msg.destination,
+                    deos_class_name(msg.message_class),
+                    deos_service_name(msg.service),
+                    msg.command, msg.payload_len);
             deos_feed_message(&msg, DEOS_TRANSPORT_ETH_ROS_BRIDGE);
         } else {
             LOG_WRN("Failed to decode UDP universal frame: %d", ret);
