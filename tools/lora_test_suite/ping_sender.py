@@ -57,12 +57,13 @@ class PingSender:
         self.ser.flush()
 
     def send_ping(self, dest_node):
-        header = struct.pack('<BBBBBBBB',
-            DEOS_PRIO_NETWORK, DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM, 
-            dest_node, DEOS_NODE_GROUND_CONTROL, 0x11, self.seq, DEOS_CMD_SYSTEM_PING
+        payload = struct.pack('<I', self.ping_id) # 4 bytes ping id
+        header = struct.pack('<BBBBBBBBB',
+            dest_node, DEOS_NODE_GROUND_CONTROL, DEOS_PRIO_NETWORK, 0x11,
+            DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_PING,
+            self.seq, len(payload)
         )
         self.seq = (self.seq + 1) & 0xFF
-        payload = struct.pack('<I', self.ping_id) # 4 bytes ping id
         tprint(f"[TX] PING gonderiliyor -> Hedef: 0x{dest_node:02X}, Ping ID: {self.ping_id}")
         self.send_lora_frame(LORA_FLAG_NONE, header + payload)
         self.ping_id += 1
@@ -113,11 +114,11 @@ class PingSender:
                 state = 0
 
     def handle_packet(self, flag, payload):
-        if len(payload) < 8:
+        if len(payload) < 9:
             return
             
-        prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
-        msg_payload = payload[8:]
+        dest, src, prio, ver, msg_class, service, cmd, seq, payload_len = struct.unpack('<BBBBBBBBB', payload[:9])
+        msg_payload = payload[9:9+payload_len]
         
         if msg_class == DEOS_CLASS_NETWORK and cmd == DEOS_CMD_SYSTEM_PONG:
             if len(msg_payload) == 4:

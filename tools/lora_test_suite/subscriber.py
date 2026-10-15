@@ -214,10 +214,10 @@ class DeosSubscriber:
         self.ser.flush()
 
     def send_message(self, dest, prio, msg_class, service, cmd, payload=b''):
-        # deos_message_t 8-bayt header:
-        # priority(1), class(1), service(1), dest(1), source(1), version(1), seq(1), cmd(1)
-        header = struct.pack('<BBBBBBBB',
-            prio, msg_class, service, dest, self.source_node, 0x11, self.seq, cmd
+        # Universal DEOS Transport Frame (9-bayt header):
+        # dest(1), src(1), prio(1), ver(1=0x11), class(1), service(1), cmd(1), seq(1), len(1)
+        header = struct.pack('<BBBBBBBBB',
+            dest, self.source_node, prio, 0x11, msg_class, service, cmd, self.seq, len(payload)
         )
         self.seq = (self.seq + 1) & 0xFF
         full_payload = header + payload
@@ -335,11 +335,11 @@ class DeosSubscriber:
             tprint("[+] ACK alındı.")
             return
 
-        if len(payload) < 8:
+        if len(payload) < 9:
             return
 
-        prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
-        msg_payload = payload[8:]
+        dest, src, prio, ver, msg_class, service, cmd, seq, payload_len = struct.unpack('<BBBBBBBBB', payload[:9])
+        msg_payload = payload[9:9+payload_len]
         node_name = NODE_NAMES.get(src, f"0x{src:02X}")
 
         # 1. SUBSCRIBE RESPONSE

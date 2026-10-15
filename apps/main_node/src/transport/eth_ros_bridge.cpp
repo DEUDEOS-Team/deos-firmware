@@ -1,4 +1,5 @@
 #include "eth_ros_bridge.hpp"
+#include "universal_frame.hpp"
 #include <zephyr/logging/log.h>
 #include <zephyr/net/socket.h>
 #include <deos/deos.h>
@@ -51,21 +52,18 @@ void EthRosBridge::tx_thread() {
     while (1) {
         if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
             if (m_sock >= 0 && m_client_connected) {
-                size_t header_sz = offsetof(deos_message_t, payload);
-                uint8_t len = header_sz + msg.payload_len;
-                
                 uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
-                tx_buf[0] = len;
-                memcpy(&tx_buf[1], &msg, header_sz);
-                if (msg.payload_len > 0) {
-                    memcpy(&tx_buf[1 + header_sz], msg.payload, msg.payload_len);
-                }
-
-                int sent = zsock_sendto(m_sock, tx_buf, len + 1, 0,
-                                        (struct sockaddr *)&m_client_addr,
-                                        sizeof(m_client_addr));
-                if (sent < 0) {
-                    LOG_ERR("UDP Send failed (%d)", errno);
+                int encoded_len = deos_universal_frame_encode(&msg, tx_buf + 1, sizeof(tx_buf) - 1);
+                if (encoded_len > 0) {
+                    tx_buf[0] = static_cast<uint8_t>(encoded_len);
+                    int sent = zsock_sendto(m_sock, tx_buf, encoded_len + 1, 0,
+                                            (struct sockaddr *)&m_client_addr,
+                                            sizeof(m_client_addr));
+                    if (sent < 0) {
+                        LOG_ERR("UDP Send failed (%d)", errno);
+                    }
+                } else {
+                    LOG_ERR("Failed to encode universal frame for ROS bridge: %d", encoded_len);
                 }
             }
         }
@@ -125,23 +123,17 @@ void EthRosBridge::rx_thread() {
         }
 
         uint8_t rx_len = rx_buf[0];
-        if (rx_len == 0 || rx_len > sizeof(deos_message_t) || received != rx_len + 1) {
+        if (rx_len < DEOS_UNIVERSAL_HEADER_SIZE || rx_len > sizeof(rx_buf) - 1 || received != rx_len + 1) {
             LOG_WRN("Invalid UDP frame received.");
             continue;
         }
 
-        size_t header_sz = offsetof(deos_message_t, payload);
-        if (rx_len >= header_sz) {
-            deos_message_t msg;
-            memset(&msg, 0, sizeof(msg));
-            memcpy(&msg, rx_buf + 1, header_sz);
-            msg.payload_len = rx_len - header_sz;
-            
-            if (msg.payload_len > 0) {
-                memcpy(msg.payload, rx_buf + 1 + header_sz, msg.payload_len);
-            }
-            
+        deos_message_t msg;
+        int ret = deos_universal_frame_decode(rx_buf + 1, rx_len, &msg);
+        if (ret == 0) {
             deos_feed_message(&msg, DEOS_TRANSPORT_ETH_ROS_BRIDGE);
+        } else {
+            LOG_WRN("Failed to decode UDP universal frame: %d", ret);
         }
     }
 }

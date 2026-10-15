@@ -117,13 +117,10 @@ static void dummy_rx_thread(void *p1, void *p2, void *p3)
                             uint8_t ack_payload[2] = { calc_crc & 0xFF, (calc_crc >> 8) & 0xFF };
                             send_lora_frame(LORA_FLAG_IS_ACK, ack_payload, 2);
                         } else {
-                            size_t header_sz = offsetof(deos_message_t, payload);
-                            if (rx_len >= header_sz) {
-                                deos_message_t msg;
-                                memset(&msg, 0, sizeof(msg));
-                                memcpy(&msg, rx_buf, header_sz);
-                                msg.payload_len = rx_len - header_sz;
-                                LOG_INF("<<< RX Data Frame (Len: %d). Cmd: 0x%02X", rx_len, msg.command);
+                            if (rx_len >= 9) {
+                                uint8_t cmd = rx_buf[6];
+                                uint8_t src = rx_buf[1];
+                                LOG_INF("<<< RX Universal Frame (Len: %d, Src: 0x%02X, Cmd: 0x%02X)", rx_len, src, cmd);
                             }
                         }
                     } else {
@@ -175,13 +172,18 @@ int main(void)
         
         memcpy(msg.payload, &ping_id, 4);
 
-        size_t header_sz = offsetof(deos_message_t, payload);
         uint8_t frame_buf[LORA_MAX_PAYLOAD];
-        memcpy(frame_buf, &msg, header_sz);
-        if (msg.payload_len > 0 && msg.payload_len <= DEOS_MAX_PAYLOAD_LEN) {
-            memcpy(frame_buf + header_sz, msg.payload, msg.payload_len);
-        }
-        size_t send_len = header_sz + msg.payload_len;
+        frame_buf[0] = (uint8_t)msg.destination;
+        frame_buf[1] = (uint8_t)msg.source;
+        frame_buf[2] = (uint8_t)msg.priority;
+        frame_buf[3] = (uint8_t)msg.version;
+        frame_buf[4] = (uint8_t)msg.message_class;
+        frame_buf[5] = (uint8_t)msg.service;
+        frame_buf[6] = (uint8_t)msg.command;
+        frame_buf[7] = (uint8_t)msg.sequence;
+        frame_buf[8] = (uint8_t)msg.payload_len;
+        memcpy(&frame_buf[9], msg.payload, msg.payload_len);
+        size_t send_len = 9 + msg.payload_len;
 
         int retries = 3;
         bool ack_received = false;

@@ -40,4 +40,5 @@ private:
     char m_tx_q_buffer[16 * sizeof(deos_message_t)]; // LORA_TX_QUEUE_SIZE = 16
 
     struct k_sem m_rx_sem;
+    struct k_mutex m_tx_lock;
 };

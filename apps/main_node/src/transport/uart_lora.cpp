@@ -1,4 +1,5 @@
 #include "uart_lora.hpp"
+#include "universal_frame.hpp"
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>
@@ -38,6 +39,7 @@ UartLora::UartLora() : m_uart_dev(DEVICE_DT_GET(DT_ALIAS(lora_uart))) {
     ring_buf_init(&m_rx_rb, RING_BUF_SIZE, m_rx_rb_buffer);
     k_msgq_init(&m_tx_q, m_tx_q_buffer, sizeof(deos_message_t), LORA_TX_QUEUE_SIZE);
     k_sem_init(&m_rx_sem, 0, K_SEM_MAX_LIMIT);
+    k_mutex_init(&m_tx_lock);
 }
 
 int UartLora::tx_callback(const deos_message_t *msg) {
@@ -90,28 +92,29 @@ static uint16_t deos_crc16_ccitt(uint16_t seed, const uint8_t *src, size_t len) 
 }
 
 void UartLora::send_lora_frame(uint8_t flag, const uint8_t *payload, uint8_t len) {
+    k_mutex_lock(&m_tx_lock, K_FOREVER);
+
     uint8_t header[4] = { LORA_MAGIC_1, LORA_MAGIC_2, flag, len };
     uint16_t crc = deos_crc16_ccitt(0xFFFF, &flag, 1);
     crc = deos_crc16_ccitt(crc, &len, 1);
-    if (len > 0) crc = deos_crc16_ccitt(crc, payload, len);
+    if (len > 0 && payload != nullptr) crc = deos_crc16_ccitt(crc, payload, len);
     
     for(int i=0; i<4; i++) uart_poll_out(m_uart_dev, header[i]);
     for(int i=0; i<len; i++) uart_poll_out(m_uart_dev, payload[i]);
     uart_poll_out(m_uart_dev, crc & 0xFF);
     uart_poll_out(m_uart_dev, (crc >> 8) & 0xFF);
+
+    k_mutex_unlock(&m_tx_lock);
 }
 
 void UartLora::send_deos_lora(uint8_t flag, const deos_message_t *msg) {
-    size_t header_sz = offsetof(deos_message_t, payload);
     uint8_t buf[LORA_MAX_PAYLOAD];
-    
-    memcpy(buf, msg, header_sz);
-    if (msg->payload_len > 0 && msg->payload_len <= DEOS_MAX_PAYLOAD_LEN) {
-        memcpy(buf + header_sz, msg->payload, msg->payload_len);
+    int encoded_len = deos_universal_frame_encode(msg, buf, sizeof(buf));
+    if (encoded_len > 0) {
+        send_lora_frame(flag, buf, static_cast<uint8_t>(encoded_len));
+    } else {
+        LOG_ERR("Failed to encode universal frame: %d", encoded_len);
     }
-    
-    uint8_t len = header_sz + msg->payload_len;
-    send_lora_frame(flag, buf, len);
 }
 
 void UartLora::tx_thread_entry(void *p1, void *p2, void *p3) {
@@ -204,21 +207,18 @@ void UartLora::rx_thread() {
                         }
                         
                         if (rx_flag != LORA_FLAG_IS_ACK) {
-                            size_t header_sz = offsetof(deos_message_t, payload);
-                            if (rx_len >= header_sz) {
+                            if (rx_len >= DEOS_UNIVERSAL_HEADER_SIZE) {
                                 deos_message_t msg;
-                                memset(&msg, 0, sizeof(msg));
-                                memcpy(&msg, rx_buf, header_sz);
-                                msg.payload_len = rx_len - header_sz;
-                                
-                                if (msg.payload_len > 0 && msg.payload_len <= DEOS_MAX_PAYLOAD_LEN) {
-                                    memcpy(msg.payload, rx_buf + header_sz, msg.payload_len);
+                                int ret = deos_universal_frame_decode(rx_buf, rx_len, &msg);
+                                if (ret == 0) {
+                                    LOG_INF("LoRa [RECEIVED - GELEN]: Havadan STM32'ye paket ulasti! (Src: 0x%02X, Dst: 0x%02X, Cmd: 0x%02X, Payload: %d byte). Router'a iletiliyor...",
+                                            msg.source, msg.destination, msg.command, msg.payload_len);
+                                    deos_feed_message(&msg, DEOS_TRANSPORT_UART_LORA);
+                                } else {
+                                    LOG_WRN("LoRa [HATA]: Havadan gelen universal frame cozulemedi: %d", ret);
                                 }
-                                
-                                LOG_INF("LoRa [RECEIVED - GELEN]: Havadan STM32'ye paket ulasti! (Cmd: 0x%02X, Payload: %d byte). Router'a iletiliyor...", msg.command, msg.payload_len);
-                                deos_feed_message(&msg, DEOS_TRANSPORT_UART_LORA);
                             } else {
-                                LOG_WRN("LoRa [HATA]: Havadan gelen paket DEOS basligi icin cok kucuk!");
+                                LOG_WRN("LoRa [HATA]: Havadan gelen paket DEOS basligi icin cok kucuk! (len: %d)", rx_len);
                             }
                         }
                     } else {

@@ -90,14 +90,14 @@ class DeosListener:
             tprint("[ACK RECEIVED]")
             return
             
-        if len(payload) < 8:
+        if len(payload) < 9:
             return
             
-        prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
-        msg_payload = payload[8:]
+        dest, src, prio, ver, msg_class, service, cmd, seq, payload_len = struct.unpack('<BBBBBBBBB', payload[:9])
+        msg_payload = payload[9:9+payload_len]
         
         hex_payload = " ".join([f"{b:02X}" for b in msg_payload])
-        tprint(f"[RX] Prio:{prio} Class:{msg_class} Srv:{service} Dst:{dest:02X} Src:{src:02X} Cmd:{cmd:02X} Len:{len(msg_payload)} Data:[{hex_payload}]")
+        tprint(f"[RX] Prio:{prio} Class:{msg_class} Srv:{service} Dst:0x{dest:02X} Src:0x{src:02X} Cmd:0x{cmd:02X} Len:{len(msg_payload)} Data:[{hex_payload}]")
 
 if __name__ == '__main__':
     listener = DeosListener()

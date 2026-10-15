@@ -91,15 +91,13 @@ class DeosStateController:
         self.ser.flush()
 
     def set_state(self, dest_node, target_state):
-        # deos_message_t Header
-        # priority(1), class(1), service(1), dest(1), source(1), version(1), seq(1), cmd(1)
-        header = struct.pack('<BBBBBBBB',
-            DEOS_PRIO_CONTROL, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, 
-            dest_node, DEOS_NODE_GROUND_CONTROL, 0x11, self.seq, DEOS_CMD_SYSTEM_SET_STATE
+        payload = struct.pack('<B', target_state) # 1 byte state
+        header = struct.pack('<BBBBBBBBB',
+            dest_node, DEOS_NODE_GROUND_CONTROL, DEOS_PRIO_CONTROL, 0x11,
+            DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE,
+            self.seq, len(payload)
         )
         self.seq = (self.seq + 1) & 0xFF
-        
-        payload = struct.pack('<B', target_state) # 1 byte state
         full_payload = header + payload
         self.send_lora_frame(LORA_FLAG_NONE, full_payload)
 
@@ -153,11 +151,11 @@ class DeosStateController:
                 state = 0
 
     def handle_packet(self, flag, payload):
-        if len(payload) < 8:
+        if len(payload) < 9:
             return
             
-        prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
-        msg_payload = payload[8:]
+        dest, src, prio, ver, msg_class, service, cmd, seq, payload_len = struct.unpack('<BBBBBBBBB', payload[:9])
+        msg_payload = payload[9:9+payload_len]
         
         if service == DEOS_SERVICE_SYSTEM:
             if cmd == DEOS_CMD_SYSTEM_HEARTBEAT and len(msg_payload) >= 1:

@@ -1,4 +1,5 @@
 #include "eth_textual.hpp"
+#include "universal_frame.hpp"
 #include <zephyr/logging/log.h>
 #include <zephyr/net/socket.h>
 #include <deos/deos.h>
@@ -57,23 +58,20 @@ void EthTextual::tx_thread() {
     while (1) {
         if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
             if (m_active_client_sock >= 0) {
-                size_t header_sz = offsetof(deos_message_t, payload);
-                uint8_t len = header_sz + msg.payload_len;
-                
                 uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
                 tx_buf[0] = TEXTUAL_MAGIC_1;
                 tx_buf[1] = TEXTUAL_MAGIC_2;
-                tx_buf[2] = len;
-                memcpy(&tx_buf[3], &msg, header_sz);
-                if (msg.payload_len > 0) {
-                    memcpy(&tx_buf[3 + header_sz], msg.payload, msg.payload_len);
-                }
-
-                int sent = zsock_send(m_active_client_sock, tx_buf, 3 + len, 0);
-                if (sent < 0) {
-                    LOG_ERR("TCP Send failed (%d), dropping client", errno);
-                    zsock_close(m_active_client_sock);
-                    m_active_client_sock = -1;
+                int encoded_len = deos_universal_frame_encode(&msg, tx_buf + 3, sizeof(tx_buf) - 3);
+                if (encoded_len > 0) {
+                    tx_buf[2] = static_cast<uint8_t>(encoded_len);
+                    int sent = zsock_send(m_active_client_sock, tx_buf, 3 + encoded_len, 0);
+                    if (sent < 0) {
+                        LOG_ERR("TCP Send failed (%d), dropping client", errno);
+                        zsock_close(m_active_client_sock);
+                        m_active_client_sock = -1;
+                    }
+                } else {
+                    LOG_ERR("Failed to encode universal frame for Textual: %d", encoded_len);
                 }
             }
         }
@@ -163,15 +161,14 @@ void EthTextual::server_thread() {
 
             case STATE_WAIT_LEN: {
                 rx_len = byte_in;
-                size_t header_sz = offsetof(deos_message_t, payload);
 
-                if (rx_len < header_sz || rx_len > sizeof(deos_message_t)) {
+                if (rx_len < DEOS_UNIVERSAL_HEADER_SIZE || rx_len > DEOS_MAX_PAYLOAD_LEN + DEOS_UNIVERSAL_HEADER_SIZE) {
                     LOG_WRN("Invalid frame length %d received after magic word.", rx_len);
                     rx_state = STATE_WAIT_MAGIC_1;
                     break;
                 }
 
-                uint8_t frame_buf[sizeof(deos_message_t)];
+                uint8_t frame_buf[DEOS_MAX_PAYLOAD_LEN + DEOS_UNIVERSAL_HEADER_SIZE + 10];
                 int received = 0;
                 bool client_err = false;
 
@@ -191,15 +188,12 @@ void EthTextual::server_thread() {
 
                 if (received == rx_len) {
                     deos_message_t msg;
-                    memset(&msg, 0, sizeof(msg));
-                    memcpy(&msg, frame_buf, header_sz);
-                    msg.payload_len = rx_len - header_sz;
-
-                    if (msg.payload_len > 0) {
-                        memcpy(msg.payload, frame_buf + header_sz, msg.payload_len);
+                    int decode_ret = deos_universal_frame_decode(frame_buf, rx_len, &msg);
+                    if (decode_ret == 0) {
+                        deos_feed_message(&msg, DEOS_TRANSPORT_ETH_TEXTUAL);
+                    } else {
+                        LOG_WRN("Failed to decode Textual universal frame: %d", decode_ret);
                     }
-
-                    deos_feed_message(&msg, DEOS_TRANSPORT_ETH_TEXTUAL);
                 }
 
                 rx_state = STATE_WAIT_MAGIC_1;

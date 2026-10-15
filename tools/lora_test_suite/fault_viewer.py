@@ -94,9 +94,10 @@ class DeosFaultViewer:
         self.ser.flush()
 
     def get_faults(self, dest_node):
-        header = struct.pack('<BBBBBBBB',
-            DEOS_PRIO_CONTROL, DEOS_CLASS_REQUEST, DEOS_SERVICE_DIAGNOSTIC, 
-            dest_node, DEOS_NODE_GROUND_CONTROL, 0x11, self.seq, DEOS_CMD_DIAG_GET_FAULTS
+        header = struct.pack('<BBBBBBBBB',
+            dest_node, DEOS_NODE_GROUND_CONTROL, DEOS_PRIO_CONTROL, 0x11,
+            DEOS_CLASS_REQUEST, DEOS_SERVICE_DIAGNOSTIC, DEOS_CMD_DIAG_GET_FAULTS,
+            self.seq, 0
         )
         self.seq = (self.seq + 1) & 0xFF
         self.send_lora_frame(LORA_FLAG_NONE, header) # Empty payload for GET_FAULTS
@@ -151,11 +152,11 @@ class DeosFaultViewer:
                 state = 0
 
     def handle_packet(self, flag, payload):
-        if len(payload) < 8:
+        if len(payload) < 9:
             return
             
-        prio, msg_class, service, dest, src, ver, seq, cmd = struct.unpack('<BBBBBBBB', payload[:8])
-        msg_payload = payload[8:]
+        dest, src, prio, ver, msg_class, service, cmd, seq, payload_len = struct.unpack('<BBBBBBBBB', payload[:9])
+        msg_payload = payload[9:9+payload_len]
         
         if service == DEOS_SERVICE_DIAGNOSTIC:
             if msg_class == DEOS_CLASS_RESPONSE and cmd == DEOS_CMD_DIAG_GET_FAULTS:
