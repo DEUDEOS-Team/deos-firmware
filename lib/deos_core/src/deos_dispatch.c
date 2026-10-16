@@ -9,18 +9,31 @@ LOG_MODULE_REGISTER(deos_dispatch, LOG_LEVEL_INF);
 
 
 
+/**
+ * @brief Kayitli uygulama mesaj isleyicisi (handler) yapisi.
+ * Tablodaki her bir slot, belirli bir yerel dugumun dinledigi komutu ve
+ * tetiklenecek fonksiyon gostericisini tutar.
+ */
 struct deos_handler_entry {
-    bool in_use;
-    deos_node_id_t local_node;
-    deos_message_class_t message_class;
-    deos_service_id_t service;
-    uint8_t command;
-    deos_message_handler_t handler;
-    void *user_data;
+    bool in_use;                         /**< Bu slot su an aktif bir kayit iceriyor mu? */
+    deos_node_id_t local_node;           /**< Bu isleyiciyi kaydeden yerel mantiksal dugum ID'si */
+    deos_message_class_t message_class;  /**< Dinlenen mesaj sinifi (COMMAND, REQUEST, EVENT vb.) */
+    deos_service_id_t service;           /**< Dinlenen servis ID'si (SYSTEM, TRACTION, STEERING vb.) */
+    uint8_t command;                     /**< Dinlenen komut numarasi (orn: 0x01 HIZ_VER) */
+    deos_message_handler_t handler;      /**< Mesaj geldiginde calistirilacak callback fonksiyonu */
+    void *user_data;                     /**< Fonksiyona iletilecek kullanici ozel verisi (context pointer) */
 };
 
+/** @brief Sistemde ayni anda kayitli olabilecek maksimum isleyici tablosu */
 static struct deos_handler_entry handler_registry[DEOS_MAX_HANDLERS];
 
+/**
+ * @brief Dispatcher (mesaj dagitim) tablosunu baslatir ve sifirlar.
+ * 
+ * Sistem ilk acildiginda cagirilir. Tablodaki tum slotlari bosaltir.
+ * 
+ * @return 0 Her zaman basarili.
+ */
 int deos_dispatch_init(void)
 {
     memset(handler_registry, 0, sizeof(handler_registry));
@@ -28,6 +41,22 @@ int deos_dispatch_init(void)
     return 0;
 }
 
+/**
+ * @brief Belirli bir yerel mantiksal dugum icin mesaj isleyici (callback) kaydeder.
+ * 
+ * Eger tek bir STM32 icinde birden fazla dugum barindiriliyorsa (hosted nodes),
+ * hangi dugumun bu komutu dinledigi 'local_node' ile belirtilir.
+ * 
+ * @param local_node    Komutu dinleyecek yerel dugum ID'si (orn: DEOS_NODE_MAIN_STM32).
+ * @param message_class Mesaj sinifi (DEOS_CLASS_COMMAND, DEOS_CLASS_REQUEST vb.).
+ * @param service       Servis ID'si (DEOS_SERVICE_TRACTION, DEOS_SERVICE_BRAKE vb.).
+ * @param command       Komut kodu (orn: 0x01).
+ * @param handler       Mesaj geldiginde tetiklenecek C/C++ fonksiyonu.
+ * @param user_data     Fonksiyona parametre olarak gecilecek nesne/veri isaretcisi (opsiyonel).
+ * 
+ * @return 0 Basarili, -EINVAL Gecersiz handler, -EPERM Dugum yerel degil,
+ *         -EEXIST Bu komut zaten kayitli, -ENOSPC Tablo tamamen dolu.
+ */
 int deos_register_handler_for_node(
     deos_node_id_t local_node,
     deos_message_class_t message_class,
@@ -79,6 +108,20 @@ int deos_register_handler_for_node(
     return 0;
 }
 
+/**
+ * @brief Varsayilan (birincil) yerel dugum icin mesaj isleyici kaydeder.
+ * 
+ * deos_register_handler_for_node() fonksiyonunun pratik bir sarmalayicisidir (wrapper).
+ * Cihazin varsayilan node_id'sini sistem konfigürasyonundan otomatik alir.
+ * 
+ * @param message_class Mesaj sinifi (COMMAND, REQUEST vb.).
+ * @param service       Servis ID'si (TRACTION, STEERING vb.).
+ * @param command       Komut kodu.
+ * @param handler       Tetiklenecek callback fonksiyonu.
+ * @param user_data     Kullanici ozel verisi (opsiyonel).
+ * 
+ * @return 0 Basarili, negatif hata kodu basarisiz.
+ */
 int deos_register_handler(
     deos_message_class_t message_class,
     deos_service_id_t service,
@@ -93,6 +136,20 @@ int deos_register_handler(
         config->node_id, message_class, service, command, handler, user_data);
 }
 
+/**
+ * @brief Tabloda belirli bir dugum ve komut icin kayitli olan isleyiciyi arar.
+ * 
+ * Genellikle testlerde veya dinamik kontrolde "bu komutu dinleyen fonksiyon var mi?"
+ * diye sorgulamak icin kullanilir.
+ * 
+ * @param local_node    Aranan dugum ID'si.
+ * @param message_class Aranan mesaj sinifi.
+ * @param service       Aranan servis ID'si.
+ * @param command       Aranan komut kodu.
+ * @param out_user_data Kayitli user_data'yi disari aktarmak icin cikis gostericisi (opsiyonel).
+ * 
+ * @return Bulunursa fonksiyon isaretcisi, bulunamazsa NULL.
+ */
 deos_message_handler_t deos_dispatch_find_handler(
     deos_node_id_t local_node,
     deos_message_class_t message_class,
@@ -115,6 +172,19 @@ deos_message_handler_t deos_dispatch_find_handler(
     return NULL;
 }
 
+/**
+ * @brief Bu mikrokontrolcuye (yerel dugumlere) ulasan bir paketi iceride isler.
+ * 
+ * Bu fonksiyon sirasiyla su asamalarla calisir:
+ * 1. Cekirdek Ag Komutlari: PING veya PONG gibi DEOS altyapi mesajlari otomatik yanitlanir.
+ * 2. Cekirdek Abonelik Komutlari: SUBSCRIBE / UNSUBSCRIBE telemetri istekleri islenir.
+ * 3. Tani (Diagnostic) Komutlari: Hata listesi sorgulama (GET_FAULTS) veya temizleme (CLEAR_FAULTS) yapilir.
+ * 4. Uygulama Isleyicileri: Yukaridaki genel sistem mesajlari degilse, tablodaki uygulama
+ *    callback'leri taranir. Eger mesaj Unicast ise ilk eslesmede cikar; Broadcast ise
+ *    ayni islemci icindeki o yayini dinleyen tum yerel dugumlerin fonksiyonlarini cagirir.
+ * 
+ * @param msg Islenecek cozulmus DEOS mesaji.
+ */
 void deos_dispatch_local(const deos_message_t *msg)
 {
     if (!msg) {
@@ -179,8 +249,8 @@ void deos_dispatch_local(const deos_message_t *msg)
             }
             handled = true;
 
-            /* Unicast messages target a single node, terminate loop.
-             * Broadcast messages must be delivered to all matching hosted nodes. */
+            /* Unicast mesajlar tek bir dugume aittir, ilk eslesmede donguyu bitir.
+             * Broadcast mesajlar ayni islemcideki tum dinleyici dugumlere dagitilmalidir. */
             if (!is_broadcast) {
                 break;
             }
@@ -193,6 +263,18 @@ void deos_dispatch_local(const deos_message_t *msg)
     }
 }
 
+/**
+ * @brief Gelen bir mesaji dugumun rolune (Router veya Endpoint) gore dagitir.
+ * 
+ * - Eger cihaz bir Router (Yonlendirici) ise: Mesaj `deos_route_message()`'a gonderilir.
+ *   Router hem yerel dugumleri kontrol eder hem de diger hatlara iletir (forward eder).
+ * - Eger cihaz normal bir Uc Dugum (Endpoint) ise: Sadece mesaji yerel dugum ID'si
+ *   veya Broadcast ile eslesiyorsa `deos_dispatch_local()` ile iceride isler; diger
+ *   dugumlere ait mesajlari gormezden gelir.
+ * 
+ * @param msg                Islenecek cozulmus DEOS mesaji.
+ * @param incoming_transport Mesajin bu mikrokontrolcuye geldigi fiziksel hat (CAN, LoRa vb.).
+ */
 void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport)
 {
     if (!msg) {
@@ -212,6 +294,14 @@ void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transpor
     }
 }
 
+/**
+ * @brief Cozulmus hazir bir mesaji dagitim sistemine besler (feed eder).
+ * 
+ * Dahili veya simule edilmis mesajlarin sisteme sokulmasi icin kullanilir.
+ * 
+ * @param msg       DEOS mesaji.
+ * @param transport Mesajin geldigi hat.
+ */
 void deos_feed_message(const deos_message_t *msg, deos_transport_t transport)
 {
     if (msg) {
@@ -219,6 +309,22 @@ void deos_feed_message(const deos_message_t *msg, deos_transport_t transport)
     }
 }
 
+/**
+ * @brief Fiziksel hattan gelen ham byte paketini (frame) sisteme besler.
+ * 
+ * CAN-FD, LoRa veya Ethernet suruculeri disaridan ham byte dizisi aldiklarinda
+ * bu fonksiyonu cagirirlar.
+ * Fonksiyon sirasiyla:
+ * 1. Ham veriyi ve CRC'yi deşifre eder (`deos_frame_decode`).
+ * 2. Eger paket bozuksa hata uretir (`DEOS_FAULT_FRAME_DECODE_FAILED`).
+ * 3. Paket saglamsa `deos_dispatch()` cagirarak yonlendirme/dagitim zincirini baslatir.
+ * 
+ * @param frame_data Ham byte dizisi.
+ * @param frame_len  Ham verinin uzunlugu (bayt).
+ * @param transport  Paketin geldigi donanim hatti (DEOS_TRANSPORT_CAN, UART_LORA vb.).
+ * 
+ * @return 0 Basarili, negatif hata kodu basarisiz / bozuk paket.
+ */
 int deos_feed_frame(const uint8_t *frame_data, size_t frame_len, deos_transport_t transport)
 {
     if (!frame_data) {
