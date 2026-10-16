@@ -1,5 +1,6 @@
 #include <deos/deos.h>
 #include <deos/deos_fault.h>
+#include <deos/deos_frame.h>
 #include "deos_internal.h"
 #include <zephyr/logging/log.h>
 #include <errno.h>
@@ -39,14 +40,19 @@ int deos_router_register_transport(deos_transport_t transport, deos_transport_tx
 
 void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_transport)
 {
-    LOG_INF("Router RX: [%s (0x%02X) -> %s (0x%02X)] Cmd: 0x%02X, Len: %d (via %s)",
+    LOG_INF("[ROUTER >> GELEN] %s (0x%02X) -> %s (0x%02X) | Hat: %s | Srv: %s | Cmd: %s (0x%02X) | Cls: %s | Seq: %u | Boyut: %d B",
             deos_node_name(msg->source), msg->source,
             deos_node_name(msg->destination), msg->destination,
-            msg->command, msg->payload_len,
-            deos_transport_name(incoming_transport));
+            deos_transport_name(incoming_transport),
+            deos_service_name(msg->service),
+            deos_command_name(msg->service, msg->command), msg->command,
+            deos_class_name(msg->message_class),
+            msg->sequence, msg->payload_len);
 
     if (!app_route_lookup) {
-        LOG_WRN("Router DROP: No routing policy registered by application!");
+        LOG_WRN("[ROUTER !! DUSURULDU (DROP)] %s (0x%02X) -> %s (0x%02X) | Neden: Uygulama rota politikasi (c_routing_policy) tanimlamamis!",
+                deos_node_name(msg->source), msg->source,
+                deos_node_name(msg->destination), msg->destination);
         deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
         return;
     }
@@ -54,17 +60,19 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
     deos_transport_t target_transport = app_route_lookup(msg->destination);
 
     if (target_transport == DEOS_TRANSPORT_LOCAL) {
-        LOG_INF("Router LOCAL: [%s (0x%02X) -> %s (0x%02X)] via LOCAL_IN",
+        LOG_INF("[ROUTER -> DUGUM ICI ISLENDI (LOCAL)] %s (0x%02X) -> %s (0x%02X) | Cmd: %s (0x%02X) | Yerel Handler'a teslim edildi",
                 deos_node_name(msg->source), msg->source,
-                deos_node_name(msg->destination), msg->destination);
+                deos_node_name(msg->destination), msg->destination,
+                deos_command_name(msg->service, msg->command), msg->command);
         deos_dispatch_local(msg);
         return;
     }
 
     if (target_transport == DEOS_TRANSPORT_BROADCAST_ALL) {
-        LOG_INF("Router BCAST: [%s (0x%02X) -> %s (0x%02X)] via ALL",
+        LOG_INF("[ROUTER -> GENEL YAYIN (BROADCAST)] %s (0x%02X) -> TUM DUGUMLER | Cmd: %s (0x%02X) | Gelen hat (%s) haric tum hatlara basiliyor",
                 deos_node_name(msg->source), msg->source,
-                deos_node_name(msg->destination), msg->destination);
+                deos_command_name(msg->service, msg->command), msg->command,
+                deos_transport_name(incoming_transport));
         /* Run local handlers */
         deos_dispatch_local(msg);
 
@@ -89,20 +97,25 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
             deos_dispatch_local(msg);
         }
 
-        LOG_INF("Router FWD: [%s (0x%02X) -> %s (0x%02X)] via %s",
+        LOG_INF("[ROUTER -> HATTAN HATTA ILETILDI (FORWARD)] %s (0x%02X) -> %s (0x%02X) | Hat: [%s -> %s] | Srv: %s | Cmd: %s (0x%02X)",
                 deos_node_name(msg->source), msg->source,
                 deos_node_name(msg->destination), msg->destination,
-                deos_transport_name(target_transport));
+                deos_transport_name(incoming_transport),
+                deos_transport_name(target_transport),
+                deos_service_name(msg->service),
+                deos_command_name(msg->service, msg->command), msg->command);
         transport_tx_registry[target_transport](msg);
     } else {
         if (target_transport == incoming_transport) {
-            LOG_DBG("Router: Skipping loopback for %s (0x%02X) via %s",
+            LOG_DBG("[ROUTER -- DONGU ONLENDI (LOOPBACK)] %s (0x%02X) paketi geldigi hatta (%s) geri basilmadi",
                     deos_node_name(msg->destination), msg->destination,
                     deos_transport_name(incoming_transport));
         } else {
-            LOG_WRN("Router DROP: Mesaj iletilemedi! Hedef: %s (0x%02X) | Hat: %s (%d) (Gecersiz rota veya aktif TX yok)", 
+            LOG_WRN("[ROUTER !! MESAJ DUSURULDU (DROP)] %s (0x%02X) -> %s (0x%02X) | Hedef Hat: %s (%d) | Neden: Rota tablosunda tanimsiz veya hat kapali! | Cmd: %s (0x%02X)", 
+                    deos_node_name(msg->source), msg->source,
                     deos_node_name(msg->destination), msg->destination,
-                    deos_transport_name(target_transport), target_transport);
+                    deos_transport_name(target_transport), target_transport,
+                    deos_command_name(msg->service, msg->command), msg->command);
             deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
         }
     }

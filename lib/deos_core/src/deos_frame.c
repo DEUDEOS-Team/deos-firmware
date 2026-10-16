@@ -128,3 +128,97 @@ const char *deos_class_name(uint8_t msg_class)
         default:                  return "UNKNOWN_CLS";
     }
 }
+
+const char *deos_command_name(uint8_t service, uint8_t cmd)
+{
+    switch (service) {
+        case DEOS_SERVICE_SYSTEM:
+            switch (cmd) {
+                case DEOS_CMD_SYSTEM_GET_STATE:         return "GET_STATE";
+                case DEOS_CMD_SYSTEM_SET_STATE:         return "SET_STATE";
+                case DEOS_CMD_SYSTEM_GET_MODE:          return "GET_MODE";
+                case DEOS_CMD_SYSTEM_SET_MODE:          return "SET_MODE";
+                case DEOS_CMD_SYSTEM_RESET_NODE:        return "RESET_NODE";
+                case DEOS_CMD_SYSTEM_GET_NODE_INFO:     return "GET_NODE_INFO";
+                case DEOS_CMD_SYSTEM_HEARTBEAT:         return "HEARTBEAT";
+                case DEOS_CMD_SYSTEM_PING:              return "PING";
+                case DEOS_CMD_SYSTEM_PONG:              return "PONG";
+                case DEOS_CMD_SYSTEM_SUBSCRIBE:         return "SUBSCRIBE";
+                case DEOS_CMD_SYSTEM_UNSUBSCRIBE:       return "UNSUBSCRIBE";
+                case DEOS_CMD_SYSTEM_GET_SUBSCRIPTIONS: return "GET_SUBSCRIPTIONS";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_TRACTION:
+            switch (cmd) {
+                case DEOS_CMD_TRACTION_SET_TARGET_SPEED: return "SET_TARGET_SPEED";
+                case DEOS_CMD_TRACTION_GET_STATUS:       return "GET_STATUS";
+                case DEOS_CMD_TRACTION_SET_GEAR:         return "SET_GEAR";
+                case DEOS_CMD_TRACTION_SET_TORQUE_LIMIT: return "SET_TORQUE_LIMIT";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_STEERING:
+            switch (cmd) {
+                case DEOS_CMD_STEERING_SET_TARGET_ANGLE: return "SET_TARGET_ANGLE";
+                case DEOS_CMD_STEERING_GET_STATUS:       return "GET_STATUS";
+                case DEOS_CMD_STEERING_SET_MODE:         return "SET_MODE";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_BRAKE:
+            switch (cmd) {
+                case DEOS_CMD_BRAKE_SET_TARGET:  return "SET_TARGET";
+                case DEOS_CMD_BRAKE_GET_STATUS:  return "GET_STATUS";
+                case DEOS_CMD_BRAKE_SET_MODE:    return "SET_MODE";
+                case DEOS_CMD_BRAKE_SET_PARK:    return "SET_PARK";
+                case DEOS_CMD_BRAKE_SET_PREFILL: return "SET_PREFILL";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_BMS:
+            switch (cmd) {
+                case DEOS_CMD_BMS_GET_STATUS:        return "GET_STATUS";
+                case DEOS_CMD_BMS_STATUS:            return "STATUS";
+                case DEOS_CMD_BMS_GET_CELL_VOLTAGES: return "GET_CELL_VOLTAGES";
+                case DEOS_CMD_BMS_CELL_VOLTAGE:      return "CELL_VOLTAGE";
+                case DEOS_CMD_BMS_GET_TEMPERATURES:  return "GET_TEMPERATURES";
+                case DEOS_CMD_BMS_TEMPERATURE:       return "TEMPERATURE";
+                case DEOS_CMD_BMS_GET_BALANCING:     return "GET_BALANCING";
+                case DEOS_CMD_BMS_BALANCING:         return "BALANCING";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_LIGHTING:
+            switch (cmd) {
+                case DEOS_CMD_LIGHTING_TURN_ON:    return "TURN_ON";
+                case DEOS_CMD_LIGHTING_TURN_OFF:   return "TURN_OFF";
+                case DEOS_CMD_LIGHTING_GET_STATUS: return "GET_STATUS";
+                case DEOS_CMD_LIGHTING_STATUS:     return "STATUS";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_DIAGNOSTIC:
+            switch (cmd) {
+                case DEOS_CMD_DIAG_GET_HEALTH:   return "GET_HEALTH";
+                case DEOS_CMD_DIAG_GET_FAULTS:   return "GET_FAULTS";
+                case DEOS_CMD_DIAG_CLEAR_FAULTS: return "CLEAR_FAULTS";
+                default: break;
+            }
+            break;
+        case DEOS_SERVICE_CALIBRATION:
+            switch (cmd) {
+                case DEOS_CMD_CAL_START:        return "CAL_START";
+                case DEOS_CMD_CAL_ABORT:        return "CAL_ABORT";
+                case DEOS_CMD_CAL_GET_STATUS:   return "CAL_GET_STATUS";
+                case DEOS_CMD_CAL_SAVE_RESULT:  return "CAL_SAVE_RESULT";
+                case DEOS_CMD_CAL_CLEAR_RESULT: return "CAL_CLEAR_RESULT";
+                default: break;
+            }
+            break;
+        default:
+            break;
+    }
+    return "UNKNOWN_CMD";
+}
+

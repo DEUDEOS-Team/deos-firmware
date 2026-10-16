@@ -88,6 +88,15 @@ const char *deos_service_name(uint8_t service);
  */
 const char *deos_class_name(uint8_t msg_class);
 
+/**
+ * @brief Get human-readable string name of a DEOS command ID based on service.
+ *
+ * @param service DEOS service ID
+ * @param cmd DEOS command ID
+ * @return String representation of command
+ */
+const char *deos_command_name(uint8_t service, uint8_t cmd);
+
 #ifdef __cplusplus
 }
 #endif
