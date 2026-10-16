@@ -99,7 +99,7 @@ DEOS Core bağımsız bir C/C++ kütüphanesi ve resmi bir Zephyr Modülüdür (
 ### Yöntem 1: Git Submodule Olarak Ekleme (En Çok Tercih Edilen)
 Projenizin kök dizininde veya kütüphaneler klasöründe:
 ```bash
-git submodule add https://github.com/emirarkali/deos-core-protocol-stack.git lib/deos_core
+git submodule add https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git lib/deos_core
 ```
 Submodule'ü ilk kez klonlayan geliştiriciler veya CI/CD için:
 ```bash
@@ -114,7 +114,7 @@ Projenizin `west.yml` dosyasındaki `projects` listesine ekleyin:
 manifest:
   projects:
     - name: deos-core
-      url: https://github.com/emirarkali/deos-core-protocol-stack.git
+      url: https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git
       revision: main
       path: modules/lib/deos_core
 ```
@@ -129,11 +129,11 @@ Zephyr derleme sistemi `lib/deos_core/zephyr/module.yml` dosyasını otomatik ta
 ### Yöntem 3: Git Subtree ile Ekleme
 Projeyi tek bir monorepo içinde tutmak ve submodule karmaşıklığından kaçınmak istiyorsanız:
 ```bash
-git subtree add --prefix=lib/deos_core https://github.com/emirarkali/deos-core-protocol-stack.git main --squash
+git subtree add --prefix=lib/deos_core https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git main --squash
 ```
 Bu repodaki güncellemeleri çekmek için:
 ```bash
-git subtree pull --prefix=lib/deos_core https://github.com/emirarkali/deos-core-protocol-stack.git main --squash
+git subtree pull --prefix=lib/deos_core https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git main --squash
 ```
 
 ---
@@ -483,5 +483,7 @@ private:
 
 ## 📄 Lisans & Sahiplik
 Bu yazılım **DEUDEOS Otonom Araç Ekibi** bünyesinde geliştirilmiştir.  
-Geliştirici & Mimari: [Emir Arkalı](https://github.com/emirarkali)  
+Mimari & Protokol Tasarımı: [Emir Arkalı](https://github.com/emirarkali)  
+Organizasyon: [DEUDEOS-Team](https://github.com/DEUDEOS-Team)  
+Protokol Deposu: [DEUDEOS-Team/deos-core-protocol-stack](https://github.com/DEUDEOS-Team/deos-core-protocol-stack)  
 Dokümantasyon & ICD Deposu: [DEUDEOS-Team/deos-docs](https://github.com/DEUDEOS-Team/deos-docs)
