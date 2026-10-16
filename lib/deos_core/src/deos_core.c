@@ -63,19 +63,25 @@ int deos_init(const struct deos_config *config)
             LOG_ERR("Failed to init router");
             return ret;
         }
-        deos_router_register_transport(DEOS_TRANSPORT_CAN_FD, deos_internal_canfd_tx);
+        if (core_config.can_dev != NULL) {
+            deos_router_register_transport(DEOS_TRANSPORT_CAN_FD, deos_internal_canfd_tx);
+        }
     }
 
-    ret = deos_rx_init();
-    if (ret != 0) {
-        LOG_ERR("Failed to init RX infrastructure");
-        return ret;
-    }
+    if (core_config.can_dev != NULL) {
+        ret = deos_rx_init();
+        if (ret != 0) {
+            LOG_ERR("Failed to init RX infrastructure");
+            return ret;
+        }
 
-    ret = deos_tx_init();
-    if (ret != 0) {
-        LOG_ERR("Failed to init TX infrastructure");
-        return ret;
+        ret = deos_tx_init();
+        if (ret != 0) {
+            LOG_ERR("Failed to init TX infrastructure");
+            return ret;
+        }
+    } else {
+        LOG_INF("CAN device not configured; CAN-FD transport disabled");
     }
 
     ret = deos_subscription_init();
@@ -100,19 +106,21 @@ int deos_start(void)
         return -EALREADY;
     }
 
-    int ret = deos_rx_start();
-    if (ret != 0) {
-        LOG_ERR("Failed to start RX threads");
-        return ret;
+    if (core_config.can_dev != NULL) {
+        int ret = deos_rx_start();
+        if (ret != 0) {
+            LOG_ERR("Failed to start RX threads");
+            return ret;
+        }
+
+        ret = deos_tx_start();
+        if (ret != 0) {
+            LOG_ERR("Failed to start TX threads");
+            return ret;
+        }
     }
 
-    ret = deos_tx_start();
-    if (ret != 0) {
-        LOG_ERR("Failed to start TX threads");
-        return ret;
-    }
-
-    ret = deos_subscription_start();
+    int ret = deos_subscription_start();
     if (ret != 0) {
         LOG_ERR("Failed to start subscription scheduler");
         return ret;
@@ -121,6 +129,11 @@ int deos_start(void)
     is_started = true;
     LOG_INF("DEOS Core started");
     return 0;
+}
+
+bool deos_can_is_available(void)
+{
+    return is_initialized && (core_config.can_dev != NULL);
 }
 
 const struct deos_config *deos_get_config(void)

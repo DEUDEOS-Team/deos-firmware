@@ -25,6 +25,13 @@ int deos_init(const struct deos_config *config);
 int deos_start(void);
 
 /**
+ * @brief Check if CAN-FD transport is configured and operational.
+ *
+ * @return true if a CAN device is bound and initialized, false otherwise.
+ */
+bool deos_can_is_available(void);
+
+/**
  * @brief Send a DEOS message.
  *
  * @param destination Target node ID.

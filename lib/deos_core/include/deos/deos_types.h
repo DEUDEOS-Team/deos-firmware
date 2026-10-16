@@ -43,7 +43,7 @@ struct device;
  */
 struct deos_config {
     deos_node_id_t node_id;
-    const struct device *can_dev;
+    const struct device *can_dev; /**< Optional: pointer to CAN device. Set to NULL if node does not use CAN-FD. */
     bool router_enabled;
     bool hosted_nodes_enabled;
 };

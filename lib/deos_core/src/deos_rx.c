@@ -74,7 +74,7 @@ int deos_rx_init(void)
 {
     const struct deos_config *config = deos_get_config();
     if (!config || !config->can_dev) {
-        return -ENODEV;
+        return 0; /* No CAN device configured: graceful no-op */
     }
 
     for (int i = 0; i < DEOS_MAX_RX_FILTERS; i++) {
@@ -116,6 +116,9 @@ int deos_rx_init(void)
 int deos_rx_start(void)
 {
     const struct deos_config *config = deos_get_config();
+    if (!config || !config->can_dev) {
+        return 0; /* No CAN device configured: graceful no-op */
+    }
 
     if (config->router_enabled) {
         /* Add CAN filter for router (promiscuous for extended DEOS frames) */

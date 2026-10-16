@@ -59,6 +59,11 @@ int deos_tx_start(void)
 
 int deos_internal_canfd_tx(const deos_message_t *msg)
 {
+    const struct deos_config *config = deos_get_config();
+    if (!config || !config->can_dev) {
+        return -ENODEV;
+    }
+
     if (k_msgq_put(&tx_msgq, msg, K_NO_WAIT) != 0) {
         LOG_WRN("TX Queue full, dropping message");
         deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
@@ -79,7 +84,7 @@ int deos_send_from_node(
     size_t payload_len)
 {
     const struct deos_config *config = deos_get_config();
-    if (!config || !config->can_dev) {
+    if (!config) {
         return -ENODEV;
     }
 
@@ -114,6 +119,12 @@ int deos_send_from_node(
     if (config->router_enabled) {
         deos_dispatch(&msg, DEOS_TRANSPORT_LOCAL);
         return 0;
+    }
+
+    /* Direct CAN send for non-router endpoint nodes */
+    if (!config->can_dev) {
+        LOG_WRN("Cannot send: router disabled and CAN device not configured");
+        return -ENODEV;
     }
 
     /* Fallback directly to queue if router is disabled */
