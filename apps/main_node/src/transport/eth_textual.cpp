@@ -70,7 +70,7 @@ void EthTextual::tx_thread() {
                         zsock_close(m_active_client_sock);
                         m_active_client_sock = -1;
                     } else {
-                        LOG_INF("Textual UI TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
+                        LOG_DBG("Textual UI TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
                                 deos_node_name(msg.source), msg.source,
                                 deos_node_name(msg.destination), msg.destination,
                                 deos_class_name(msg.message_class),

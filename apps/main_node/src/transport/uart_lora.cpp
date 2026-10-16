@@ -129,7 +129,7 @@ void UartLora::tx_thread() {
     while (1) {
         if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
             send_deos_lora(LORA_FLAG_NONE, &msg);
-            LOG_INF("LoRa TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d", 
+            LOG_DBG("LoRa TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d", 
                     deos_node_name(msg.source), msg.source,
                     deos_node_name(msg.destination), msg.destination,
                     deos_class_name(msg.message_class),
@@ -204,7 +204,7 @@ void UartLora::rx_thread() {
                         if (rx_flag == LORA_FLAG_ACK_REQ) {
                             uint8_t ack_payload[2] = { static_cast<uint8_t>(calc_crc & 0xFF), static_cast<uint8_t>((calc_crc >> 8) & 0xFF) };
                             send_lora_frame(LORA_FLAG_IS_ACK, ack_payload, 2);
-                            LOG_INF("LoRa ACK TX: Gelen pakete ACK yollandi (CRC 0x%04X)", calc_crc);
+                            LOG_DBG("LoRa ACK TX: Gelen pakete ACK yollandi (CRC 0x%04X)", calc_crc);
                         }
                         
                         if (rx_flag != LORA_FLAG_IS_ACK) {

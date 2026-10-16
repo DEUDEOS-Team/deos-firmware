@@ -62,7 +62,7 @@ void EthRosBridge::tx_thread() {
                     if (sent < 0) {
                         LOG_ERR("UDP Send failed (%d)", errno);
                     } else {
-                        LOG_INF("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
+                        LOG_DBG("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
                                 deos_node_name(msg.source), msg.source,
                                 deos_node_name(msg.destination), msg.destination,
                                 deos_class_name(msg.message_class),

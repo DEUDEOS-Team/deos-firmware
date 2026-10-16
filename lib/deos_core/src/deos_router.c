@@ -54,7 +54,7 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
     deos_transport_t target_transport = app_route_lookup(msg->destination);
 
     if (target_transport == DEOS_TRANSPORT_LOCAL) {
-        LOG_DBG("Router LOCAL: [%s (0x%02X) -> %s (0x%02X)] via LOCAL_IN",
+        LOG_INF("Router LOCAL: [%s (0x%02X) -> %s (0x%02X)] via LOCAL_IN",
                 deos_node_name(msg->source), msg->source,
                 deos_node_name(msg->destination), msg->destination);
         deos_dispatch_local(msg);
@@ -62,6 +62,9 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
     }
 
     if (target_transport == DEOS_TRANSPORT_BROADCAST_ALL) {
+        LOG_INF("Router BCAST: [%s (0x%02X) -> %s (0x%02X)] via ALL",
+                deos_node_name(msg->source), msg->source,
+                deos_node_name(msg->destination), msg->destination);
         /* Run local handlers */
         deos_dispatch_local(msg);
 
@@ -86,7 +89,7 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
             deos_dispatch_local(msg);
         }
 
-        LOG_DBG("Router FWD: [%s (0x%02X) -> %s (0x%02X)] via %s",
+        LOG_INF("Router FWD: [%s (0x%02X) -> %s (0x%02X)] via %s",
                 deos_node_name(msg->source), msg->source,
                 deos_node_name(msg->destination), msg->destination,
                 deos_transport_name(target_transport));
