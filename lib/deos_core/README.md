@@ -78,9 +78,53 @@ Stream tabanlı hatlar (LoRa UART, Ethernet TCP/UDP vb.) üzerinden taşınırke
 
 ---
 
-## 🚀 Projeye Dahil Etme (Entegrasyon)
+## 🚀 Projeye Dahil Etme (Entegrasyon Yöntemleri)
 
-### 1. CMake Yapılandırması (`CMakeLists.txt`)
+DEOS Core bağımsız bir C/C++ kütüphanesi ve resmi bir Zephyr Modülüdür (`module.yml` tanımlıdır). Projenize 3 farklı yöntemle dahil edebilirsiniz:
+
+### Yöntem 1: Git Submodule Olarak Ekleme (En Çok Tercih Edilen)
+Projenizin kök dizininde veya kütüphaneler klasöründe:
+```bash
+git submodule add https://github.com/emirarkali/deos-core-protocol-stack.git lib/deos_core
+```
+Submodule'ü ilk kez klonlayan geliştiriciler veya CI/CD için:
+```bash
+git submodule update --init --recursive
+```
+
+---
+
+### Yöntem 2: Zephyr Modülü Olarak Ekleme (West Manifest)
+Projenizin `west.yml` dosyasındaki `projects` listesine ekleyin:
+```yaml
+manifest:
+  projects:
+    - name: deos-core
+      url: https://github.com/emirarkali/deos-core-protocol-stack.git
+      revision: main
+      path: modules/lib/deos_core
+```
+Ardından terminalden modülü indirin:
+```bash
+west update
+```
+Zephyr derleme sistemi `lib/deos_core/zephyr/module.yml` dosyasını otomatik tanır ve kütüphaneyi Kconfig ağacına bağlar.
+
+---
+
+### Yöntem 3: Git Subtree ile Ekleme
+Projeyi tek bir monorepo içinde tutmak ve submodule karmaşıklığından kaçınmak istiyorsanız:
+```bash
+git subtree add --prefix=lib/deos_core https://github.com/emirarkali/deos-core-protocol-stack.git main --squash
+```
+Bu repodaki güncellemeleri çekmek için:
+```bash
+git subtree pull --prefix=lib/deos_core https://github.com/emirarkali/deos-core-protocol-stack.git main --squash
+```
+
+---
+
+### 4. CMake Yapılandırması (`CMakeLists.txt`)
 
 Uygulamanızın `CMakeLists.txt` dosyasına `deos_core` ve kullanacağınız transport kütüphanelerini ekleyin:
 
