@@ -31,50 +31,56 @@ Bu kılavuz, DEOS Core kütüphanesini projelerinize nasıl entegre edeceğinizi
 
 ---
 
-## 📡 Haberleşme & Çerçeve Formatları
+## 📡 Medya Bağımsız Mesaj & Çerçeve Mimarisi
 
-### 1. 29-bit CAN ID Formatı (Extended Identifier)
+DEOS Core, fiziksel iletim hattından (CAN-FD, UART/LoRa, Ethernet vb.) **tamamen soyutlanmıştır**. Çekirdek protokol yalnızca mantıksal mesaj yapısını (`deos_message_t`) ve hatlar arası ortak serileştirmeyi (`Universal Transport Frame`) yönetir.
 
-CAN-FD hattı üzerinden taşınan paketlerde 29-bit Extended CAN ID şu şekilde çözümlenir:
-
-| Bit Aralığı | Uzunluk | Alan Adı | Açıklama |
-| :--- | :---: | :--- | :--- |
-| **28..26** | 3 bit | **Priority** | Mesaj önceliği (`EMERGENCY=0x00`, `SAFETY=0x01`, `COMMAND=0x02`, `STATUS=0x04`) |
-| **25..22** | 4 bit | **Message Class** | Mesaj sınıfı (`COMMAND=0x01`, `STATUS=0x02`, `EVENT=0x03`, `REQUEST=0x04`, `RESPONSE=0x05`, `DIAGNOSTIC=0x06`, `NETWORK=0x07`) |
-| **21..16** | 6 bit | **Service ID** | Hedef Servis (`SYSTEM=0x00`, `TRACTION=0x01`, `STEERING=0x02`, `BRAKE=0x03`, `BMS=0x04` vb.) |
-| **15..8**  | 8 bit | **Destination Node** | Hedef Düğüm ID (`0xFF`: Global Broadcast, `0xFE`: CAN Broadcast) |
-| **7..0**   | 8 bit | **Source Node** | Gönderen Kaynak Düğüm ID |
+> [!NOTE]
+> 29-bit Extended CAN Identifier paketleme, maskeleme ve donanımsal CAN filtreleme kuralları Core içerisinde değil, doğrudan **[`lib/deos_transport_can`](../deos_transport_can/README.md)** eklentisi içerisinde yer alır.
 
 ---
 
-### 2. Ortak Veri Başlığı (Common Header - 4 Bayt)
+### 1. Mantıksal Mesaj Yapısı (`deos_message_t`)
 
-Her DEOS mesajının payload başında 4 baytlık ortak başlık bulunur:
+DEOS Core içerisindeki tüm yönlendirme, hata denetimi ve uygulama callback'leri C seviyesinde standart `deos_message_t` yapısı üzerinden yürütülür:
 
+```c
+typedef struct {
+    deos_priority_t      priority;       /* Mesaj önceliği (EMERGENCY, SAFETY, COMMAND, STATUS) */
+    deos_message_class_t message_class;  /* Mesaj sınıfı (COMMAND, STATUS, EVENT, REQUEST, RESPONSE, DIAGNOSTIC) */
+    deos_service_id_t    service;        /* Hedef servis (SYSTEM, TRACTION, STEERING, BRAKE, BMS vb.) */
+
+    deos_node_id_t       destination;    /* Hedef düğüm ID (0xFF: Broadcast, 0xFE: CAN Broadcast) */
+    deos_node_id_t       source;         /* Kaynak düğüm ID */
+
+    uint8_t              version;        /* Protokol sürümü (0x11 = v1.1) */
+    uint8_t              sequence;       /* Düğüm bazlı sıra sayacı (paket kaybı tespiti) */
+    uint8_t              command;        /* Servise ait komut kodu */
+
+    uint8_t              payload[60];    /* Net veri alanı (Maksimum 60 bayt) */
+    uint8_t              payload_len;    /* Payload net uzunluğu */
+} deos_message_t;
 ```
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    Version    |   Sequence    |    Command    | Payload Length|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Command Payload (0 .. 60 Bytes)              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
-
-* `Version (0x11)`: Protokol sürümü (v1.1).
-* `Sequence`: Düğümün gönderdiği her mesajda 1 artan sıra sayacı (paket kaybı tespiti için).
-* `Command`: Servise ait komut ID'si (ör. `0x01`).
-* `Payload Length`: Başlık sonrası gelen net veri uzunluğu (Maksimum 60 bayt).
 
 ---
 
-### 3. Evrensel Çerçeve (Universal Transport Frame)
+### 2. Evrensel Taşıma Çerçevesi (Universal Transport Frame)
 
-Stream tabanlı hatlar (LoRa UART, Ethernet TCP/UDP vb.) üzerinden taşınırken başa Magic Baytları ve sona CRC16 eklenir:
+Hatlar arasında (özellikle LoRa, Ethernet veya Stream tabanlı arayüzlerde) serileştirme yapılırken `deos_frame_encode()` / `deos_frame_decode()` tarafından kullanılan ortak paket yapısıdır:
 
 ```
-[0xDE] [0x05] [Len: 1B] [Priority: 1B] [Class: 1B] [Service: 1B] [Dest: 1B] [Src: 1B] [Payload: N B] [CRC16: 2B]
++--------+--------+--------+----------+-------+---------+------+-----+-------------------+--------+
+| MAGIC1 | MAGIC2 | LENGTH | PRIORITY | CLASS | SERVICE | DEST | SRC | PAYLOAD (0..60 B) | CRC16  |
+|  0xDE  |  0x05  |  1 B   |   1 B    |  1 B  |   1 B   | 1 B  | 1 B |     N Bayt        |  2 B   |
++--------+--------+--------+----------+-------+---------+------+-----+-------------------+--------+
 ```
+
+* **Magic Bytes (`0xDE 0x05`):** Çerçeve başlangıç baytları (Frame Synchronization).
+* **Length:** Başlık sonrası gelen payload uzunluğu.
+* **Header Alanları:** Öncelik, sınıf, servis, hedef ve kaynak ID'leri.
+* **CRC16-CCITT (`0xFFFF` başlangıçlı):** Bayt bozulmalarını algılamak için uçtan uca sağlama toplamı.
+
+Fiziksel hattan gelen her ham byte akışı `deos_feed_frame()` fonksiyonuna iletilir; Core bu çerçeveyi çözer ve `deos_message_t` haline getirerek yönlendiriciye veya yerel düğüme teslim eder.
 
 ---
 
