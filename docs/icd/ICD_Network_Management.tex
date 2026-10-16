@@ -330,7 +330,7 @@ Byte & Alan Adı & Tip & Boyut & Açıklama \\
 \midrule
 0 & Result Code & \code{uint8\_t} & 1 Byte & İşlem sonucu: \hex{00} SUCCESS (\code{deos\_result\_t}) \\
 1 & Node ID & \code{uint8\_t} & 1 Byte & Cevap veren düğümün mantıksal kimliği (\code{deos\_node\_id\_t}) \\
-2 & Hardware Type & \code{uint8\_t} & 1 Byte & Donanım tipi (\hex{01} STM32H5, \hex{02} Linux/Pi, \hex{03} ESP32) \\
+2 & Hardware Type & \code{uint8\_t} & 1 Byte & Donanım tipi (\hex{00} UNKNOWN, \hex{01} STM32H5, \hex{02} STM32F4, \hex{03} LINUX\_PC, \hex{04} ESP32) \\
 3 & Protocol Version & \code{uint8\_t} & 1 Byte & Desteklenen wire format sürümü (\hex{11} = v1.1) \\
 4 & FW Major & \code{uint8\_t} & 1 Byte & Firmware ana sürümü (Örn: 1) \\
 5 & FW Minor & \code{uint8\_t} & 1 Byte & Firmware alt sürümü (Örn: 2) \\
@@ -350,7 +350,7 @@ typedef struct
 {
     uint8_t  result_code;        /* 0x00: SUCCESS (deos_result_t) */
     uint8_t  node_id;            /* Logical Node ID (deos_node_id_t) */
-    uint8_t  hw_type;            /* Hardware Type (e.g. 0x01 STM32H5) */
+    uint8_t  hw_type;            /* Hardware Type (deos_hw_type_t) */
     uint8_t  proto_version;      /* Protocol Version (0x11 = v1.1) */
     uint8_t  fw_version_major;   /* Firmware Version - Major */
     uint8_t  fw_version_minor;   /* Firmware Version - Minor */
@@ -361,6 +361,23 @@ typedef struct
     uint32_t uptime_s;           /* Node uptime in seconds */
 } __attribute__((packed)) deos_node_info_payload_t;
 \end{lstlisting}
+
+\subsection{Hardware Type Değerleri (\code{hw\_type})}
+\code{hw\_type} 8-bit alanı, sorgulanan düğümün üzerinde çalıştığı mikrodenetleyici veya bilgisayar platformunu tanımlar:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{c l l X}
+\toprule
+Değer & C Sabiti & Platform & Açıklama \\
+\midrule
+\hex{00} & \code{DEOS\_HW\_TYPE\_UNKNOWN}  & Tanımsız / Bilinmeyen & Donanım tipi henüz tanıtılmamış \\
+\hex{01} & \code{DEOS\_HW\_TYPE\_STM32H5}  & STM32H5 Serisi        & NUCLEO-H563ZI vb. Cortex-M33 ana işlemciler \\
+\hex{02} & \code{DEOS\_HW\_TYPE\_STM32F4}  & STM32F4 Serisi        & NUCLEO-F446RE vb. Cortex-M4 yardımcı düğümler \\
+\hex{03} & \code{DEOS\_HW\_TYPE\_LINUX\_PC} & Linux Tabanlı Bilgisayar & ROS 2 Bilgisayarı / Raspberry Pi / Jetson \\
+\hex{04} & \code{DEOS\_HW\_TYPE\_ESP32}    & ESP32 Serisi          & Kablosuz / WiFi / BLE yardımcı telemetri \\
+\bottomrule
+\end{tabularx}
+\end{center}
 
 \subsection{Supported Services Bitmask Alanı}
 \code{supported\_services} 32-bit bitmask alanı, sorgulanan düğümün hangi fonksiyonel servisleri barındırdığını belirtir:
