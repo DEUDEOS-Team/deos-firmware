@@ -64,23 +64,31 @@ typedef struct {
 
 ---
 
-### 2. Evrensel Taşıma Çerçevesi (Universal Transport Frame)
+### 2. Evrensel Taşıma Çerçevesi (Universal Transport Frame - `UNIVERSAL_9B`)
 
-Hatlar arasında (özellikle LoRa, Ethernet veya Stream tabanlı arayüzlerde) serileştirme yapılırken `deos_frame_encode()` / `deos_frame_decode()` tarafından kullanılan ortak paket yapısıdır:
+Farklı iletim ortamları (LoRa, Ethernet, Ring Buffer vb.) arasında ham byte aktarımı yapılırken `deos_frame_encode()` ve `deos_frame_decode()` tarafından kullanılan resmi çerçeve yapısıdır (**DOC-ICD-CORE-001 Section 8 / 9.1**):
 
-```
-+--------+--------+--------+----------+-------+---------+------+-----+-------------------+--------+
-| MAGIC1 | MAGIC2 | LENGTH | PRIORITY | CLASS | SERVICE | DEST | SRC | PAYLOAD (0..60 B) | CRC16  |
-|  0xDE  |  0x05  |  1 B   |   1 B    |  1 B  |   1 B   | 1 B  | 1 B |     N Bayt        |  2 B   |
-+--------+--------+--------+----------+-------+---------+------+-----+-------------------+--------+
-```
+**Sabit 9 Bayt Başlık (Header) + N Bayt Veri Yükü (Payload):**
 
-* **Magic Bytes (`0xDE 0x05`):** Çerçeve başlangıç baytları (Frame Synchronization).
-* **Length:** Başlık sonrası gelen payload uzunluğu.
-* **Header Alanları:** Öncelik, sınıf, servis, hedef ve kaynak ID'leri.
-* **CRC16-CCITT (`0xFFFF` başlangıçlı):** Bayt bozulmalarını algılamak için uçtan uca sağlama toplamı.
+| Bayt Ofseti | Alan Adı | Tip | Açıklama |
+| :---: | :--- | :---: | :--- |
+| **0** | `Destination` | `uint8_t` | Hedef Düğüm ID (Örn: `0x01` veya `0xFF` Broadcast) |
+| **1** | `Source` | `uint8_t` | Kaynak Düğüm ID (Paketi üreten düğüm) |
+| **2** | `Priority` | `uint8_t` | Mesaj önceliği (`EMERGENCY=0x00` .. `STATUS=0x04`) |
+| **3** | `Version` | `uint8_t` | Protokol sürümü (`0x11` = v1.1) |
+| **4** | `Class` | `uint8_t` | Mesaj sınıfı (`COMMAND`, `STATUS`, `EVENT`, `REQUEST` vb.) |
+| **5** | `Service` | `uint8_t` | Hedef Servis (`SYSTEM`, `TRACTION`, `STEERING`, `BRAKE` vb.) |
+| **6** | `Command` | `uint8_t` | Komut / Telemetri ID kodu |
+| **7** | `Sequence` | `uint8_t` | Gönderici sıra sayacı (Sıralama ve kayıp takibi) |
+| **8** | `Length` | `uint8_t` | Veri yükü (Payload) bayt uzunluğu ($0 \le N \le 60$) |
+| **9 .. (9+N-1)** | `Payload` | `uint8_t[N]` | Little-Endian sıralı net veri baytları |
 
-Fiziksel hattan gelen her ham byte akışı `deos_feed_frame()` fonksiyonuna iletilir; Core bu çerçeveyi çözer ve `deos_message_t` haline getirerek yönlendiriciye veya yerel düğüme teslim eder.
+* **Kodlama Fonksiyonu:** `int deos_frame_encode(const deos_message_t *msg, uint8_t *buf, size_t buf_max);`  
+  * `msg` yapısını alır, yukarıdaki `9 + N` baytlık diziye dönüştürür.
+* **Deşifre Fonksiyonu:** `int deos_frame_decode(const uint8_t *buf, size_t frame_len, deos_message_t *msg);`  
+  * Ham bayt akışından başlığı ve veriyi doğrular, `deos_message_t` yapısına geri açar.
+* **Sisteme Besleme:** `deos_feed_frame(buf, len, transport);`  
+  * Transport sürücüsü hattan aldığı bu bayt dizisini doğrudan bu fonksiyona verir. Çekirdek protokol paketi deşifre eder, bozuksa `DEOS_FAULT_FRAME_DECODE_FAILED` üretir, sağlamsa yönlendiriciye iletir.
 
 ---
 
