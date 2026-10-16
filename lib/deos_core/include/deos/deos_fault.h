@@ -22,12 +22,9 @@ typedef enum
     DEOS_FAULT_WATCHDOG_RESET             = 0x0002,
     DEOS_FAULT_INVALID_CONFIGURATION      = 0x0003,
     DEOS_FAULT_COMMUNICATION_TIMEOUT      = 0x0004,
-    DEOS_FAULT_RX_QUEUE_OVERFLOW          = 0x0005, /* Legacy generic alias */
-    DEOS_FAULT_TX_FAILURE                 = 0x0006, /* Legacy generic alias */
-    DEOS_FAULT_PROTOCOL_ERROR             = 0x0007, /* Legacy generic alias */
-    DEOS_FAULT_LOCAL_STORAGE_ERROR        = 0x0008,
-    DEOS_FAULT_ESTOP_TRIGGERED            = 0x0009,
-    DEOS_FAULT_MEMORY_ALLOCATION_FAILED   = 0x000A,
+    DEOS_FAULT_LOCAL_STORAGE_ERROR        = 0x0005,
+    DEOS_FAULT_ESTOP_TRIGGERED            = 0x0006,
+    DEOS_FAULT_MEMORY_ALLOCATION_FAILED   = 0x0007,
 
     /* --- Telemetri & Abonelik Hataları (0x0010 - 0x001F) --- */
     DEOS_FAULT_SUB_TABLE_FULL             = 0x0010,

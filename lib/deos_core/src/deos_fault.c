@@ -1,5 +1,6 @@
 #include <deos/deos.h>
 #include <deos/deos_fault.h>
+#include <deos/deos_frame.h>
 #include "deos_internal.h"
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
@@ -175,9 +176,15 @@ int deos_fault_raise_for_node(deos_node_id_t local_node, uint16_t fault_id, deos
     }
 
     k_mutex_unlock(&ctx->mutex);
-    LOG_WRN("[Node 0x%02X] Fault Raised: %s (0x%04X) | Severity: %s",
-            local_node, deos_fault_name(fault_id), fault_id,
-            deos_fault_severity_name(severity));
+    if (severity >= DEOS_FAULT_SEVERITY_ERROR) {
+        LOG_ERR("[FAULT RAISE] Node: %s (0x%02X) | Hata: %s (0x%04X) | Seviye: %s",
+                deos_node_name(local_node), local_node, deos_fault_name(fault_id), fault_id,
+                deos_fault_severity_name(severity));
+    } else {
+        LOG_WRN("[FAULT RAISE] Node: %s (0x%02X) | Hata: %s (0x%04X) | Seviye: %s",
+                deos_node_name(local_node), local_node, deos_fault_name(fault_id), fault_id,
+                deos_fault_severity_name(severity));
+    }
     return 0;
 }
 
