@@ -197,24 +197,11 @@ void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transpor
     if (config && config->router_enabled) {
         deos_route_message(msg, incoming_transport);
     } else {
-        if (incoming_transport == DEOS_TRANSPORT_LOCAL) {
-            /* Outgoing message from local endpoint: forward to default transport */
-            deos_transport_t default_trp = deos_get_default_transport();
-            deos_transport_tx_fn_t tx_fn = (default_trp != DEOS_TRANSPORT_UNKNOWN) ?
-                                           deos_router_get_transport_tx(default_trp) : NULL;
-            if (tx_fn) {
-                tx_fn(msg);
-            } else {
-                LOG_WRN("Endpoint node has no default transport for outgoing message");
-                deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
-            }
-        } else {
-            /* Non-router endpoint node: process incoming message only if local or broadcast */
-            if (deos_is_local_node(msg->destination) || 
-                msg->destination == DEOS_NODE_GLOBAL_BROADCAST || 
-                msg->destination == DEOS_NODE_CAN_BROADCAST) {
-                deos_dispatch_local(msg);
-            }
+        /* Non-router endpoint node: process incoming message only if local or broadcast */
+        if (deos_is_local_node(msg->destination) || 
+            msg->destination == DEOS_NODE_GLOBAL_BROADCAST || 
+            msg->destination == DEOS_NODE_CAN_BROADCAST) {
+            deos_dispatch_local(msg);
         }
     }
 }

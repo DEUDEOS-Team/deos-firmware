@@ -124,11 +124,11 @@ int deos_can_transport_tx(const deos_message_t *msg)
 int deos_can_transport_init(const struct device *can_dev)
 {
     if (!can_dev) {
-        return -EINVAL;
+        can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_can_primary));
     }
 
     if (!device_is_ready(can_dev)) {
-        LOG_ERR("CAN device %s is not ready", can_dev->name);
+        LOG_ERR("CAN device is not ready");
         return -ENODEV;
     }
 
@@ -209,9 +209,6 @@ int deos_can_transport_init(const struct device *can_dev)
             return rx_filter_ids[filter_idx];
         }
         filter_idx++;
-
-        /* For non-router endpoint node, set CAN-FD as default transport */
-        deos_set_default_transport(DEOS_TRANSPORT_CAN_FD);
     }
 
     /* Register with DEOS core router */
@@ -220,7 +217,7 @@ int deos_can_transport_init(const struct device *can_dev)
     m_is_initialized = true;
     LOG_INF("DEOS CAN-FD Transport initialized (%s)", m_can_dev->name);
 
-    return 0;
+    return deos_can_transport_start();
 }
 
 int deos_can_transport_start(void)
@@ -230,7 +227,7 @@ int deos_can_transport_start(void)
     }
 
     if (m_is_started) {
-        return -EALREADY;
+        return 0;
     }
 
     int ret = can_start(m_can_dev);

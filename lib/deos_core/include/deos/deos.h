@@ -191,28 +191,6 @@ int deos_router_register_transport(deos_transport_t transport,
                                    deos_transport_tx_fn_t tx_fn);
 
 /**
- * @brief Get the registered transmit function for a transport interface.
- *
- * @param transport The transport ID.
- * @return Function pointer or NULL if not registered.
- */
-deos_transport_tx_fn_t deos_router_get_transport_tx(deos_transport_t transport);
-
-/**
- * @brief Set the default transport for outgoing messages on non-router (endpoint) nodes.
- *
- * @param transport The default transport ID (e.g. DEOS_TRANSPORT_CAN_FD).
- */
-void deos_set_default_transport(deos_transport_t transport);
-
-/**
- * @brief Get the configured default transport for endpoint nodes.
- *
- * @return The transport ID or DEOS_TRANSPORT_UNKNOWN.
- */
-deos_transport_t deos_get_default_transport(void);
-
-/**
  * @brief Lookup function pointer type for dynamic routing.
  */
 typedef deos_transport_t (*deos_router_lookup_fn_t)(deos_node_id_t destination);

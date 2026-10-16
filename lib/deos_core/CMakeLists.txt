@@ -1,6 +1,6 @@
 add_library(deos_core STATIC
     src/deos_core.c
-    src/deos_tx.c
+    src/deos_send.c
     src/deos_dispatch.c
     src/deos_codec.c
     src/deos_network.c

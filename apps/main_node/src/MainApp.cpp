@@ -2,7 +2,6 @@
 #include "transport/eth_textual.hpp"
 #include "transport/eth_ros_bridge.hpp"
 #include "transport/uart_lora.hpp"
-#include <deos/deos_frame.h>
 #include <deos/deos_can.h>
 #include "io/ImuSensor.hpp"
 #include <zephyr/logging/log.h>
@@ -128,17 +127,6 @@ int MainApp::init() {
         return ret;
     }
 
-    const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_can_primary));
-    if (device_is_ready(can_dev)) {
-        ret = deos_can_transport_init(can_dev);
-        if (ret != 0) {
-            LOG_ERR("CAN transport init failed: %d", ret);
-            return ret;
-        }
-    } else {
-        LOG_WRN("CAN primary device is not ready!");
-    }
-
     deos_router_set_lookup_fn(c_routing_policy);
     
     /* DEOS çekirdeğine Heartbeat paketlerini nereye düşüreceğini söylüyoruz */
@@ -152,6 +140,11 @@ int MainApp::init() {
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_TURN_OFF, lighting_command_rx_callback, NULL);
     deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_GET_STATUS, lighting_get_status_rx_callback, NULL);
 
+    ret = deos_can_transport_init(NULL);
+    if (ret != 0) {
+        LOG_ERR("CAN transport init failed: %d", ret);
+        return ret;
+    }
     EthTextual::getInstance().init();
     EthRosBridge::getInstance().init();
     UartLora::getInstance().init();
@@ -187,7 +180,6 @@ void MainApp::broadcast_lighting_status() {
 
 void MainApp::run() {
     deos_start();
-    deos_can_transport_start();
 
     LOG_INF("Main System Controller (Brain) loop started.");
 

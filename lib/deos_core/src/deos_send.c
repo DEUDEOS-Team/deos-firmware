@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <string.h>
 
-LOG_MODULE_REGISTER(deos_tx, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(deos_send, LOG_LEVEL_INF);
 
 int deos_send_from_node(
     deos_node_id_t source_node,
