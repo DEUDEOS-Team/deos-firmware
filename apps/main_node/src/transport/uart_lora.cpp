@@ -49,7 +49,7 @@ int UartLora::tx_callback(const deos_message_t *msg) {
 int UartLora::send(const deos_message_t *msg) {
     if (k_msgq_put(&m_tx_q, msg, K_NO_WAIT) != 0) {
         LOG_WRN("LoRa TX queue full, dropping message");
-        deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
+        deos_fault_raise(DEOS_FAULT_LORA_TX_QUEUE_FULL, DEOS_FAULT_SEVERITY_WARNING);
         return -ENOSPC;
     }
     return 0;
@@ -212,6 +212,7 @@ void UartLora::rx_thread() {
                                 deos_feed_frame(rx_buf, rx_len, DEOS_TRANSPORT_UART_LORA);
                             } else {
                                 LOG_WRN("LoRa [HATA]: Havadan gelen paket DEOS basligi icin cok kucuk! (len: %d)", rx_len);
+                                deos_fault_raise(DEOS_FAULT_LORA_FRAME_MALFORMED, DEOS_FAULT_SEVERITY_WARNING);
                             }
                         }
                     } else {
@@ -220,6 +221,7 @@ void UartLora::rx_thread() {
                         for (int i=0; i<rx_len; i++) {
                             LOG_WRN("Data[%d]: %02X", i, rx_buf[i]);
                         }
+                        deos_fault_raise(DEOS_FAULT_LORA_CRC_MISMATCH, DEOS_FAULT_SEVERITY_WARNING);
                     }
                     rx_state = STATE_WAIT_MAGIC1;
                     break;

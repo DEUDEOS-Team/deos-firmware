@@ -223,7 +223,7 @@ int deos_feed_frame(const uint8_t *frame_data, size_t frame_len, deos_transport_
     int ret = deos_frame_decode(frame_data, frame_len, &msg);
     if (ret != 0) {
         LOG_WRN("DEOS RX Error: Corrupt frame (%d) via %s", ret, deos_transport_name(transport));
-        deos_fault_raise(DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
+        deos_fault_raise(DEOS_FAULT_FRAME_DECODE_FAILED, DEOS_FAULT_SEVERITY_WARNING);
         return ret;
     }
 

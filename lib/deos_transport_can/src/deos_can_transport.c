@@ -57,14 +57,14 @@ static void can_rx_thread_func(void *p1, void *p2, void *p3)
 
     while (1) {
         if (atomic_cas(&rx_overflow_flag, 1, 0)) {
-            deos_fault_raise(DEOS_FAULT_RX_QUEUE_OVERFLOW, DEOS_FAULT_SEVERITY_ERROR);
+            deos_fault_raise(DEOS_FAULT_CAN_RX_QUEUE_FULL, DEOS_FAULT_SEVERITY_ERROR);
         }
 
         if (k_msgq_get(&can_rx_msgq, &frame, K_FOREVER) == 0) {
             int ret = deos_can_decode_frame(&frame, &msg);
             if (ret != 0) {
                 LOG_WRN("Failed to decode CAN frame: %d", ret);
-                deos_fault_raise(DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
+                deos_fault_raise(DEOS_FAULT_CAN_FRAME_DECODE_ERR, DEOS_FAULT_SEVERITY_WARNING);
                 continue;
             }
 
@@ -92,7 +92,7 @@ static void can_tx_thread_func(void *p1, void *p2, void *p3)
                     int ret = can_send(m_can_dev, &frame, K_MSEC(100), NULL, NULL);
                     if (ret != 0) {
                         LOG_ERR("CAN send failed: %d", ret);
-                        deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
+                        deos_fault_raise(DEOS_FAULT_CAN_TX_SEND_FAILED, DEOS_FAULT_SEVERITY_WARNING);
                     } else {
                         LOG_DBG("CAN Sent MSG (Cmd: 0x%02X) Seq: %u", msg.command, msg.sequence);
                     }
@@ -114,7 +114,7 @@ int deos_can_transport_tx(const deos_message_t *msg)
 
     if (k_msgq_put(&can_tx_msgq, msg, K_NO_WAIT) != 0) {
         LOG_WRN("CAN TX Queue full, dropping message");
-        deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
+        deos_fault_raise(DEOS_FAULT_CAN_TX_QUEUE_FULL, DEOS_FAULT_SEVERITY_WARNING);
         return -ENOSPC;
     }
 

@@ -40,7 +40,7 @@ int EthTextual::send(const deos_message_t *msg) {
 
     if (k_msgq_put(&m_tx_q, msg, K_NO_WAIT) != 0) {
         LOG_WRN("Textual TX queue full, dropping message");
-        deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
+        deos_fault_raise(DEOS_FAULT_ETH_TX_QUEUE_FULL, DEOS_FAULT_SEVERITY_WARNING);
         return -ENOSPC;
     }
     return 0;
@@ -67,6 +67,7 @@ void EthTextual::tx_thread() {
                     int sent = zsock_send(m_active_client_sock, tx_buf, 3 + encoded_len, 0);
                     if (sent < 0) {
                         LOG_ERR("TCP Send failed (%d), dropping client", errno);
+                        deos_fault_raise(DEOS_FAULT_ETH_TX_SEND_FAILED, DEOS_FAULT_SEVERITY_WARNING);
                         zsock_close(m_active_client_sock);
                         m_active_client_sock = -1;
                     } else {

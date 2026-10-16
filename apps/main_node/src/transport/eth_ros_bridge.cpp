@@ -34,7 +34,7 @@ int EthRosBridge::tx_callback(const deos_message_t *msg) {
 int EthRosBridge::send(const deos_message_t *msg) {
     if (k_msgq_put(&m_tx_q, msg, K_NO_WAIT) != 0) {
         LOG_WRN("ROS Bridge TX queue full, dropping message");
-        deos_fault_raise(DEOS_FAULT_TX_FAILURE, DEOS_FAULT_SEVERITY_WARNING);
+        deos_fault_raise(DEOS_FAULT_ETH_TX_QUEUE_FULL, DEOS_FAULT_SEVERITY_WARNING);
         return -ENOSPC;
     }
     return 0;
@@ -61,6 +61,7 @@ void EthRosBridge::tx_thread() {
                                             sizeof(m_client_addr));
                     if (sent < 0) {
                         LOG_ERR("UDP Send failed (%d)", errno);
+                        deos_fault_raise(DEOS_FAULT_ETH_TX_SEND_FAILED, DEOS_FAULT_SEVERITY_WARNING);
                     } else {
                         LOG_DBG("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
                                 deos_node_name(msg.source), msg.source,
