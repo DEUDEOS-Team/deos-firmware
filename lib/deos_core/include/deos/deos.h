@@ -174,10 +174,44 @@ int deos_subscription_notify_change_for_node(deos_node_id_t local_node,
  * @brief Notify ON_CHANGE subscribers of a state update (primary local node).
  */
 int deos_subscription_notify_change(deos_service_id_t service, uint8_t command);
+ 
+ /**
+  * @brief Set node metadata and capabilities for the primary local node.
+  *
+  * @param hw_type Hardware platform type (e.g. DEOS_HW_TYPE_STM32H5).
+  * @param fw_maj Firmware version major.
+  * @param fw_min Firmware version minor.
+  * @param fw_patch Firmware version patch.
+  * @param git_hash 4-byte Git commit hash prefix.
+  * @param supported_services Bitmask of supported services (1 << DEOS_SERVICE_...).
+  * @return 0 on success, negative error code on failure.
+  */
+int deos_set_node_info(uint8_t hw_type, uint8_t fw_maj, uint8_t fw_min, uint8_t fw_patch,
+                       uint32_t git_hash, uint32_t supported_services);
 
 /**
- * @brief Transport TX function pointer type.
- */
+  * @brief Set node metadata and capabilities for a specific hosted local node.
+  */
+int deos_set_node_info_for_node(deos_node_id_t node_id, uint8_t hw_type,
+                                uint8_t fw_maj, uint8_t fw_min, uint8_t fw_patch,
+                                uint32_t git_hash, uint32_t supported_services);
+
+/**
+  * @brief Send a GET_NODE_INFO request to query identity/version of a target node.
+  *
+  * @param destination Target node ID (Broadcast rejected with -EINVAL).
+  * @return 0 on success, negative error code on failure.
+  */
+int deos_send_node_info_request(deos_node_id_t destination);
+
+/**
+  * @brief Send a GET_NODE_INFO request from a specific local node.
+  */
+int deos_send_node_info_request_from_node(deos_node_id_t source_node, deos_node_id_t destination);
+
+/**
+  * @brief Transport TX function pointer type.
+  */
 typedef int (*deos_transport_tx_fn_t)(const deos_message_t *msg);
 
 /**

@@ -78,6 +78,7 @@ void deos_subscription_process(void);
  */
 void deos_handle_ping(const deos_message_t *msg);
 void deos_handle_pong(const deos_message_t *msg);
+void deos_handle_get_node_info(const deos_message_t *msg);
 
 /*
  * Router (deos_router.c)

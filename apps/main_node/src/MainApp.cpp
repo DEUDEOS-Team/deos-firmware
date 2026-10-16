@@ -128,6 +128,10 @@ int MainApp::init() {
     }
 
     deos_router_set_lookup_fn(c_routing_policy);
+
+    /* Düğüm kimlik ve yetenek metaverisini kaydet (GET_NODE_INFO) */
+    uint32_t supported_services = (1U << DEOS_SERVICE_SYSTEM) | (1U << DEOS_SERVICE_LIGHTING);
+    deos_set_node_info(DEOS_HW_TYPE_STM32H5, 1, 0, 0, 0, supported_services);
     
     /* DEOS çekirdeğine Heartbeat paketlerini nereye düşüreceğini söylüyoruz */
     deos_register_handler(DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_HEARTBEAT, heartbeat_rx_callback, NULL);

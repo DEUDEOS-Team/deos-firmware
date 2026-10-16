@@ -93,6 +93,34 @@ struct deos_unsubscribe_req_payload {
 } __attribute__((packed));
 
 /*
+ * Hardware Platform Type Identifiers
+ */
+typedef enum {
+    DEOS_HW_TYPE_UNKNOWN  = 0x00,
+    DEOS_HW_TYPE_STM32H5  = 0x01,
+    DEOS_HW_TYPE_STM32F4  = 0x02,
+    DEOS_HW_TYPE_LINUX_PC = 0x03,
+    DEOS_HW_TYPE_ESP32    = 0x04
+} deos_hw_type_t;
+
+/*
+ * GET_NODE_INFO Response Payload (DOC-ICD-NET-001 Section 3 - 20 Bytes Little-Endian)
+ */
+struct deos_node_info_payload {
+    uint8_t  result_code;        /* 0x00: SUCCESS (deos_result_t) */
+    uint8_t  node_id;            /* Logical Node ID (deos_node_id_t) */
+    uint8_t  hw_type;            /* Hardware type (deos_hw_type_t) */
+    uint8_t  proto_version;      /* Protocol wire version (0x11 = v1.1) */
+    uint8_t  fw_version_major;   /* Firmware Version - Major */
+    uint8_t  fw_version_minor;   /* Firmware Version - Minor */
+    uint8_t  fw_version_patch;   /* Firmware Version - Patch */
+    uint8_t  reserved;           /* 0x00 alignment padding */
+    uint32_t git_hash;           /* 4-byte Git commit prefix */
+    uint32_t supported_services; /* Bitmask: (1 << DEOS_SERVICE_SYSTEM) | ... */
+    uint32_t uptime_s;           /* Uptime in seconds */
+} __attribute__((packed));
+
+/*
  * TRACTION Command Payloads
  */
 struct deos_traction_target_payload {

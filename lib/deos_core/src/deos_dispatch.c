@@ -208,13 +208,16 @@ void deos_dispatch_local(const deos_message_t *msg)
         }
     }
 
-    /* Common Subscription Behaviour */
+    /* Common Subscription & System Request Behaviour */
     if (msg->service == DEOS_SERVICE_SYSTEM && msg->message_class == DEOS_CLASS_REQUEST) {
         if (msg->command == DEOS_CMD_SYSTEM_SUBSCRIBE) {
             deos_subscription_handle_subscribe(msg);
             return;
         } else if (msg->command == DEOS_CMD_SYSTEM_UNSUBSCRIBE) {
             deos_subscription_handle_unsubscribe(msg);
+            return;
+        } else if (msg->command == DEOS_CMD_SYSTEM_GET_NODE_INFO) {
+            deos_handle_get_node_info(msg);
             return;
         }
     }
