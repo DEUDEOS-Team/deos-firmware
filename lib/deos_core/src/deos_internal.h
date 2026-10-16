@@ -102,6 +102,7 @@ int deos_tx_start(void);
  */
 int deos_dispatch_init(void);
 void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport);
+void deos_dispatch_local(const deos_message_t *msg);
 deos_message_handler_t deos_dispatch_find_handler(
     deos_node_id_t local_node,
     deos_message_class_t message_class,

@@ -46,8 +46,11 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
             deos_transport_name(incoming_transport));
 
     if (msg->destination == DEOS_NODE_GLOBAL_BROADCAST) {
+        /* Run local handlers first */
+        deos_dispatch_local(msg);
+
         /* Route to all registered transports EXCEPT the one it came from (Loop Prevention) */
-        for (int i = 1; i < DEOS_TRANSPORT_COUNT; i++) { /* Start at 1 to skip INTERNAL */
+        for (int i = 1; i < DEOS_TRANSPORT_COUNT; i++) { /* Start at 1 to skip LOCAL */
             deos_transport_t target_transport = (deos_transport_t)i;
             if (target_transport != incoming_transport && transport_tx_registry[target_transport] != NULL) {
                 transport_tx_registry[target_transport](msg);
@@ -57,6 +60,9 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
     }
 
     if (msg->destination == DEOS_NODE_CAN_BROADCAST) {
+        if (deos_is_local_node(msg->destination)) {
+            deos_dispatch_local(msg);
+        }
         /* Route ONLY to CAN_FD (if not incoming from it) */
         if (incoming_transport != DEOS_TRANSPORT_CAN_FD && transport_tx_registry[DEOS_TRANSPORT_CAN_FD] != NULL) {
             transport_tx_registry[DEOS_TRANSPORT_CAN_FD](msg);
@@ -69,9 +75,24 @@ void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_tra
 
     if (app_route_lookup) {
         target_transport = app_route_lookup(msg->destination);
+    } else if (deos_is_local_node(msg->destination)) {
+        target_transport = DEOS_TRANSPORT_LOCAL;
     } else {
         /* Default fallback if application hasn't provided a routing policy */
         target_transport = DEOS_TRANSPORT_CAN_FD;
+    }
+
+    /* Fallback in case application policy did not explicitly map its local node */
+    if (target_transport == DEOS_TRANSPORT_UNKNOWN && deos_is_local_node(msg->destination)) {
+        target_transport = DEOS_TRANSPORT_LOCAL;
+    }
+
+    if (target_transport == DEOS_TRANSPORT_LOCAL) {
+        LOG_DBG("Router LOCAL: [%s (0x%02X) -> %s (0x%02X)] via LOCAL_IN",
+                deos_node_name(msg->source), msg->source,
+                deos_node_name(msg->destination), msg->destination);
+        deos_dispatch_local(msg);
+        return;
     }
 
     /* Prevent Loopback and check if transport is registered */

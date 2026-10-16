@@ -115,17 +115,9 @@ deos_message_handler_t deos_dispatch_find_handler(
     return NULL;
 }
 
-void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport)
+void deos_dispatch_local(const deos_message_t *msg)
 {
-    const struct deos_config *config = deos_get_config();
-    bool is_local = deos_is_local_node(msg->destination) || (msg->destination == DEOS_NODE_GLOBAL_BROADCAST) || (msg->destination == DEOS_NODE_CAN_BROADCAST);
-
-    /* Router Logic */
-    if (config->router_enabled && (!deos_is_local_node(msg->destination) || msg->destination == DEOS_NODE_GLOBAL_BROADCAST || msg->destination == DEOS_NODE_CAN_BROADCAST)) {
-        deos_route_message(msg, incoming_transport);
-    }
-
-    if (!is_local) {
+    if (!msg) {
         return;
     }
 
@@ -192,6 +184,25 @@ void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transpor
     if (!handled) {
         LOG_DBG("No handler for Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
                 msg->message_class, msg->service, msg->command);
+    }
+}
+
+void deos_dispatch(const deos_message_t *msg, deos_transport_t incoming_transport)
+{
+    if (!msg) {
+        return;
+    }
+
+    const struct deos_config *config = deos_get_config();
+    if (config && config->router_enabled) {
+        deos_route_message(msg, incoming_transport);
+    } else {
+        /* Non-router endpoint node: process only if local or broadcast */
+        if (deos_is_local_node(msg->destination) || 
+            msg->destination == DEOS_NODE_GLOBAL_BROADCAST || 
+            msg->destination == DEOS_NODE_CAN_BROADCAST) {
+            deos_dispatch_local(msg);
+        }
     }
 }
 
