@@ -53,7 +53,7 @@ void EthRosBridge::tx_thread() {
         if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
             if (m_sock >= 0 && m_client_connected) {
                 uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
-                int encoded_len = deos_universal_frame_encode(&msg, tx_buf + 1, sizeof(tx_buf) - 1);
+                int encoded_len = deos_frame_encode(&msg, tx_buf + 1, sizeof(tx_buf) - 1);
                 if (encoded_len > 0) {
                     tx_buf[0] = static_cast<uint8_t>(encoded_len);
                     int sent = zsock_sendto(m_sock, tx_buf, encoded_len + 1, 0,
@@ -136,7 +136,7 @@ void EthRosBridge::rx_thread() {
         }
 
         deos_message_t msg;
-        int ret = deos_universal_frame_decode(rx_buf + 1, rx_len, &msg);
+        int ret = deos_frame_decode(rx_buf + 1, rx_len, &msg);
         if (ret == 0) {
             LOG_INF("ROS Bridge RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
                     deos_node_name(msg.source), msg.source,

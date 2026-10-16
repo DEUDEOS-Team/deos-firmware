@@ -56,10 +56,6 @@ int deos_frame_encode(const deos_message_t *msg, uint8_t *buf, size_t buf_max);
  */
 int deos_frame_decode(const uint8_t *buf, size_t frame_len, deos_message_t *msg);
 
-/* Aliases for backward compatibility */
-#define deos_universal_frame_encode deos_frame_encode
-#define deos_universal_frame_decode deos_frame_decode
-
 /**
  * @brief Get human-readable string name of a DEOS node ID.
  *

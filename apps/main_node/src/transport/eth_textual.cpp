@@ -61,7 +61,7 @@ void EthTextual::tx_thread() {
                 uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
                 tx_buf[0] = TEXTUAL_MAGIC_1;
                 tx_buf[1] = TEXTUAL_MAGIC_2;
-                int encoded_len = deos_universal_frame_encode(&msg, tx_buf + 3, sizeof(tx_buf) - 3);
+                int encoded_len = deos_frame_encode(&msg, tx_buf + 3, sizeof(tx_buf) - 3);
                 if (encoded_len > 0) {
                     tx_buf[2] = static_cast<uint8_t>(encoded_len);
                     int sent = zsock_send(m_active_client_sock, tx_buf, 3 + encoded_len, 0);
@@ -195,7 +195,7 @@ void EthTextual::server_thread() {
 
                 if (received == rx_len) {
                     deos_message_t msg;
-                    int decode_ret = deos_universal_frame_decode(frame_buf, rx_len, &msg);
+                    int decode_ret = deos_frame_decode(frame_buf, rx_len, &msg);
                     if (decode_ret == 0) {
                         LOG_INF("Textual UI RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
                                 deos_node_name(msg.source), msg.source,

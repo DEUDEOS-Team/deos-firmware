@@ -109,7 +109,7 @@ void UartLora::send_lora_frame(uint8_t flag, const uint8_t *payload, uint8_t len
 
 void UartLora::send_deos_lora(uint8_t flag, const deos_message_t *msg) {
     uint8_t buf[LORA_MAX_PAYLOAD];
-    int encoded_len = deos_universal_frame_encode(msg, buf, sizeof(buf));
+    int encoded_len = deos_frame_encode(msg, buf, sizeof(buf));
     if (encoded_len > 0) {
         send_lora_frame(flag, buf, static_cast<uint8_t>(encoded_len));
     } else {
@@ -210,7 +210,7 @@ void UartLora::rx_thread() {
                         if (rx_flag != LORA_FLAG_IS_ACK) {
                             if (rx_len >= DEOS_UNIVERSAL_HEADER_SIZE) {
                                 deos_message_t msg;
-                                int ret = deos_universal_frame_decode(rx_buf, rx_len, &msg);
+                                int ret = deos_frame_decode(rx_buf, rx_len, &msg);
                                 if (ret == 0) {
                                     LOG_INF("LoRa RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
                                             deos_node_name(msg.source), msg.source,
