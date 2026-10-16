@@ -1,4 +1,9 @@
 /* KARTA ÖZEL OVERLAY DOSYASI */
+/ {
+    aliases {
+        lora-uart = &usart6;
+    };
+};
 &pinctrl {
     usart6_tx_pg14: usart6_tx_pg14 {
         pinmux = <STM32_PINMUX('G', 14, AF7)>;

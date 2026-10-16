@@ -1,49 +1,9 @@
-#pragma once
-
-#include <deos/deos.h>
-#include <deos/deos_icd.h>
+#include <deos/deos_frame.h>
 #include <string.h>
 #include <errno.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*
- * Universal DEOS Transport Frame (DOC-ICD-CORE-001 Section 8 / 9.1 - UNIVERSAL_9B)
- *
- * Byte 0: Destination Node (uint8_t)
- * Byte 1: Source Node (uint8_t)
- * Byte 2: Priority (uint8_t)
- * Byte 3: Version (uint8_t, 0x11 = v1.1)
- * Byte 4: Message Class (uint8_t)
- * Byte 5: Service ID (uint8_t)
- * Byte 6: Command ID (uint8_t)
- * Byte 7: Sequence (uint8_t)
- * Byte 8: Payload Length (uint8_t, N)
- * Byte 9..: Payload (uint8_t[N])
- */
-#define DEOS_UNIVERSAL_HEADER_SIZE 9
-#define DEOS_UF_DEST_OFFSET        0
-#define DEOS_UF_SRC_OFFSET         1
-#define DEOS_UF_PRIO_OFFSET        2
-#define DEOS_UF_VER_OFFSET         3
-#define DEOS_UF_CLASS_OFFSET       4
-#define DEOS_UF_SERVICE_OFFSET     5
-#define DEOS_UF_CMD_OFFSET         6
-#define DEOS_UF_SEQ_OFFSET         7
-#define DEOS_UF_LEN_OFFSET         8
-#define DEOS_UF_PAYLOAD_OFFSET     9
-
-/**
- * @brief Encode a deos_message_t into Media-Independent Universal DEOS Transport Frame (9+N bytes).
- *
- * @param msg Pointer to source deos_message_t
- * @param buf Output buffer
- * @param buf_max Maximum capacity of output buffer
- * @return Total frame length (9 + payload_len) on success, negative error code on failure.
- */
-static inline int deos_universal_frame_encode(const deos_message_t *msg, uint8_t *buf, size_t buf_max) {
+int deos_frame_encode(const deos_message_t *msg, uint8_t *buf, size_t buf_max)
+{
     if (!msg || !buf) {
         return -EINVAL;
     }
@@ -68,15 +28,8 @@ static inline int deos_universal_frame_encode(const deos_message_t *msg, uint8_t
     return DEOS_UNIVERSAL_HEADER_SIZE + msg->payload_len;
 }
 
-/**
- * @brief Decode a Media-Independent Universal DEOS Transport Frame into deos_message_t.
- *
- * @param buf Input buffer containing Universal Frame bytes
- * @param frame_len Length of the received frame
- * @param msg Output deos_message_t structure
- * @return 0 on success, negative error code on failure.
- */
-static inline int deos_universal_frame_decode(const uint8_t *buf, size_t frame_len, deos_message_t *msg) {
+int deos_frame_decode(const uint8_t *buf, size_t frame_len, deos_message_t *msg)
+{
     if (!buf || !msg) {
         return -EINVAL;
     }
@@ -110,7 +63,8 @@ static inline int deos_universal_frame_decode(const uint8_t *buf, size_t frame_l
     return 0;
 }
 
-static inline const char *deos_node_name(uint8_t node_id) {
+const char *deos_node_name(uint8_t node_id)
+{
     switch (node_id) {
         case DEOS_NODE_INVALID:          return "INVALID";
         case DEOS_NODE_TEXTUAL:          return "TEXTUAL";
@@ -131,7 +85,8 @@ static inline const char *deos_node_name(uint8_t node_id) {
     }
 }
 
-static inline const char *deos_transport_name(uint8_t transport) {
+const char *deos_transport_name(deos_transport_t transport)
+{
     switch (transport) {
         case DEOS_TRANSPORT_LOCAL:          return "LOCAL";
         case DEOS_TRANSPORT_CAN_FD:         return "CAN_FD";
@@ -142,22 +97,24 @@ static inline const char *deos_transport_name(uint8_t transport) {
     }
 }
 
-static inline const char *deos_service_name(uint8_t service) {
+const char *deos_service_name(uint8_t service)
+{
     switch (service) {
-        case DEOS_SERVICE_SYSTEM:     return "SYSTEM";
-        case DEOS_SERVICE_TRACTION:   return "TRACTION";
-        case DEOS_SERVICE_STEERING:   return "STEERING";
-        case DEOS_SERVICE_BRAKE:      return "BRAKE";
-        case DEOS_SERVICE_BMS:          return "BMS";
-        case DEOS_SERVICE_CALIBRATION:  return "CALIBRATION";
-        case DEOS_SERVICE_DIAGNOSTIC:   return "DIAGNOSTIC";
-        case DEOS_SERVICE_SENSORS:    return "SENSORS";
-        case DEOS_SERVICE_LIGHTING:   return "LIGHTING";
-        default:                      return "UNKNOWN_SVC";
+        case DEOS_SERVICE_SYSTEM:      return "SYSTEM";
+        case DEOS_SERVICE_TRACTION:    return "TRACTION";
+        case DEOS_SERVICE_STEERING:    return "STEERING";
+        case DEOS_SERVICE_BRAKE:       return "BRAKE";
+        case DEOS_SERVICE_BMS:         return "BMS";
+        case DEOS_SERVICE_CALIBRATION: return "CALIBRATION";
+        case DEOS_SERVICE_DIAGNOSTIC:  return "DIAGNOSTIC";
+        case DEOS_SERVICE_SENSORS:     return "SENSORS";
+        case DEOS_SERVICE_LIGHTING:    return "LIGHTING";
+        default:                       return "UNKNOWN_SVC";
     }
 }
 
-static inline const char *deos_class_name(uint8_t msg_class) {
+const char *deos_class_name(uint8_t msg_class)
+{
     switch (msg_class) {
         case DEOS_CLASS_SAFETY:   return "SAFETY";
         case DEOS_CLASS_COMMAND:  return "COMMAND";
@@ -170,7 +127,3 @@ static inline const char *deos_class_name(uint8_t msg_class) {
         default:                  return "UNKNOWN_CLS";
     }
 }
-
-#ifdef __cplusplus
-}
-#endif

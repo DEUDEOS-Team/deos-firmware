@@ -1,5 +1,5 @@
 #include "eth_textual.hpp"
-#include "universal_frame.hpp"
+#include <deos/deos_frame.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/socket.h>
 #include <deos/deos.h>

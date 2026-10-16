@@ -1,5 +1,5 @@
 #include "uart_lora.hpp"
-#include "universal_frame.hpp"
+#include <deos/deos_frame.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>

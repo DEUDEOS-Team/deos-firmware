@@ -4,6 +4,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/ring_buffer.h>
 #include <deos/deos_types.h>
+#include <deos/deos_frame.h>
 #include <zephyr/sys/crc.h>
 #include <string.h>
 
@@ -173,17 +174,11 @@ int main(void)
         memcpy(msg.payload, &ping_id, 4);
 
         uint8_t frame_buf[LORA_MAX_PAYLOAD];
-        frame_buf[0] = (uint8_t)msg.destination;
-        frame_buf[1] = (uint8_t)msg.source;
-        frame_buf[2] = (uint8_t)msg.priority;
-        frame_buf[3] = (uint8_t)msg.version;
-        frame_buf[4] = (uint8_t)msg.message_class;
-        frame_buf[5] = (uint8_t)msg.service;
-        frame_buf[6] = (uint8_t)msg.command;
-        frame_buf[7] = (uint8_t)msg.sequence;
-        frame_buf[8] = (uint8_t)msg.payload_len;
-        memcpy(&frame_buf[9], msg.payload, msg.payload_len);
-        size_t send_len = 9 + msg.payload_len;
+        int send_len = deos_frame_encode(&msg, frame_buf, sizeof(frame_buf));
+        if (send_len < 0) {
+            LOG_ERR("Failed to encode universal frame: %d", send_len);
+            continue;
+        }
 
         int retries = 3;
         bool ack_received = false;

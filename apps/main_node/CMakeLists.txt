@@ -29,6 +29,7 @@ target_sources(app PRIVATE
     ../../lib/deos_core/src/deos_router.c
     ../../lib/deos_core/src/deos_fault.c
     ../../lib/deos_core/src/deos_subscription.c
+    ../../lib/deos_core/src/deos_frame.c
 )
 
 zephyr_include_directories(../../lib/deos_core/include)

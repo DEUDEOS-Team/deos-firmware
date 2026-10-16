@@ -2,7 +2,7 @@
 #include "transport/eth_textual.hpp"
 #include "transport/eth_ros_bridge.hpp"
 #include "transport/uart_lora.hpp"
-#include "transport/universal_frame.hpp"
+#include <deos/deos_frame.h>
 #include "io/ImuSensor.hpp"
 #include <zephyr/logging/log.h>
 

@@ -3,6 +3,7 @@
 
 #include <deos/deos_icd.h>
 #include <deos/deos_types.h>
+#include <deos/deos_frame.h>
 
 #ifdef __cplusplus
 extern "C" {
