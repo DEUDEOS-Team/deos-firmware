@@ -93,6 +93,7 @@ const char *deos_transport_name(deos_transport_t transport)
         case DEOS_TRANSPORT_ETH_TEXTUAL:    return "ETH_TEXTUAL";
         case DEOS_TRANSPORT_ETH_ROS_BRIDGE: return "ETH_ROS_BRIDGE";
         case DEOS_TRANSPORT_UART_LORA:      return "UART_LORA";
+        case DEOS_TRANSPORT_BROADCAST_ALL:  return "BROADCAST_ALL";
         default:                            return "UNKNOWN_TRP";
     }
 }

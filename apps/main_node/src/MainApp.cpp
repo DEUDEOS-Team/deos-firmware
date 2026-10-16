@@ -91,6 +91,10 @@ extern "C" {
     deos_transport_t c_routing_policy(deos_node_id_t destination) {
         if (destination == DEOS_NODE_MAIN_STM32) {
             return DEOS_TRANSPORT_LOCAL;
+        } else if (destination == DEOS_NODE_GLOBAL_BROADCAST) {
+            return DEOS_TRANSPORT_BROADCAST_ALL;
+        } else if (destination == DEOS_NODE_CAN_BROADCAST) {
+            return DEOS_TRANSPORT_CAN_FD;
         } else if (destination == DEOS_NODE_GROUND_CONTROL) {
             return DEOS_TRANSPORT_UART_LORA;
         } else if (destination == DEOS_NODE_ROS_BRIDGE) {
