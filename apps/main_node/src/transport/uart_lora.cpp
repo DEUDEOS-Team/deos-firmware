@@ -209,19 +209,7 @@ void UartLora::rx_thread() {
                         
                         if (rx_flag != LORA_FLAG_IS_ACK) {
                             if (rx_len >= DEOS_UNIVERSAL_HEADER_SIZE) {
-                                deos_message_t msg;
-                                int ret = deos_frame_decode(rx_buf, rx_len, &msg);
-                                if (ret == 0) {
-                                    LOG_INF("LoRa RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
-                                            deos_node_name(msg.source), msg.source,
-                                            deos_node_name(msg.destination), msg.destination,
-                                            deos_class_name(msg.message_class),
-                                            deos_service_name(msg.service),
-                                            msg.command, msg.payload_len);
-                                    deos_feed_message(&msg, DEOS_TRANSPORT_UART_LORA);
-                                } else {
-                                    LOG_WRN("LoRa [HATA]: Havadan gelen universal frame cozulemedi: %d", ret);
-                                }
+                                deos_feed_frame(rx_buf, rx_len, DEOS_TRANSPORT_UART_LORA);
                             } else {
                                 LOG_WRN("LoRa [HATA]: Havadan gelen paket DEOS basligi icin cok kucuk! (len: %d)", rx_len);
                             }

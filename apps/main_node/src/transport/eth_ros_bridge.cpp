@@ -135,19 +135,7 @@ void EthRosBridge::rx_thread() {
             continue;
         }
 
-        deos_message_t msg;
-        int ret = deos_frame_decode(rx_buf + 1, rx_len, &msg);
-        if (ret == 0) {
-            LOG_INF("ROS Bridge RX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d -> Router'a iletiliyor",
-                    deos_node_name(msg.source), msg.source,
-                    deos_node_name(msg.destination), msg.destination,
-                    deos_class_name(msg.message_class),
-                    deos_service_name(msg.service),
-                    msg.command, msg.payload_len);
-            deos_feed_message(&msg, DEOS_TRANSPORT_ETH_ROS_BRIDGE);
-        } else {
-            LOG_WRN("Failed to decode UDP universal frame: %d", ret);
-        }
+        deos_feed_frame(rx_buf + 1, rx_len, DEOS_TRANSPORT_ETH_ROS_BRIDGE);
     }
 }
 

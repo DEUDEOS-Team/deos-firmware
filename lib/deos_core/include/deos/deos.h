@@ -196,14 +196,25 @@ typedef deos_transport_t (*deos_router_lookup_fn_t)(deos_node_id_t destination);
 void deos_router_set_lookup_fn(deos_router_lookup_fn_t lookup_fn);
 
 /**
- * @brief Feed an incoming message from a transport into the DEOS core
- dispatcher.
-
+ * @brief Feed an incoming message from a transport into the DEOS core dispatcher.
  *
  * @param msg The received message.
  * @param transport The transport interface it arrived on.
  */
 void deos_feed_message(const deos_message_t *msg, deos_transport_t transport);
+
+/**
+ * @brief Feed a raw Universal DEOS Transport Frame from a transport into the DEOS core.
+ *
+ * This function decodes the frame into a deos_message_t, raises a fault if the frame
+ * is malformed, and forwards it to the router or local dispatchers.
+ *
+ * @param frame_data Pointer to the raw universal frame buffer.
+ * @param frame_len Length of the raw universal frame.
+ * @param transport The transport interface it arrived on.
+ * @return 0 on success, negative error code on decode/validation failure.
+ */
+int deos_feed_frame(const uint8_t *frame_data, size_t frame_len, deos_transport_t transport);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,5 @@
 #include <deos/deos.h>
+#include <deos/deos_fault.h>
 #include "deos_internal.h"
 #include <zephyr/logging/log.h>
 #include <errno.h>
@@ -199,4 +200,22 @@ void deos_feed_message(const deos_message_t *msg, deos_transport_t transport)
     if (msg) {
         deos_dispatch(msg, transport);
     }
+}
+
+int deos_feed_frame(const uint8_t *frame_data, size_t frame_len, deos_transport_t transport)
+{
+    if (!frame_data) {
+        return -EINVAL;
+    }
+
+    deos_message_t msg;
+    int ret = deos_frame_decode(frame_data, frame_len, &msg);
+    if (ret != 0) {
+        LOG_WRN("DEOS RX Error: Corrupt frame (%d) via %s", ret, deos_transport_name(transport));
+        deos_fault_raise(DEOS_FAULT_PROTOCOL_ERROR, DEOS_FAULT_SEVERITY_WARNING);
+        return ret;
+    }
+
+    deos_dispatch(&msg, transport);
+    return 0;
 }
