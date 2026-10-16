@@ -162,22 +162,28 @@ void deos_dispatch_local(const deos_message_t *msg)
 
     /* Application Handlers */
     bool handled = false;
+    bool is_broadcast = (msg->destination == DEOS_NODE_GLOBAL_BROADCAST || 
+                         msg->destination == DEOS_NODE_CAN_BROADCAST);
+
     for (int i = 0; i < DEOS_MAX_HANDLERS; i++) {
         if (handler_registry[i].in_use &&
-            (handler_registry[i].local_node == msg->destination || msg->destination == DEOS_NODE_GLOBAL_BROADCAST || msg->destination == DEOS_NODE_CAN_BROADCAST) &&
+            (handler_registry[i].local_node == msg->destination || is_broadcast) &&
             handler_registry[i].message_class == msg->message_class &&
             handler_registry[i].service == msg->service &&
             handler_registry[i].command == msg->command) {
             
             int ret = handler_registry[i].handler(msg, handler_registry[i].user_data);
             if (ret != 0) {
-                LOG_WRN("Handler returned error %d for Cmd: 0x%X", ret, msg->command);
+                LOG_WRN("Handler returned error %d for Cmd: 0x%X (Node: 0x%02X)",
+                        ret, msg->command, handler_registry[i].local_node);
             }
             handled = true;
-            /* TODO(architecture): If this is a BROADCAST message, should we break here 
-             * or continue dispatching to ALL other local nodes that registered this handler? 
-             * Current DEOS semantics deliver it once to the first matching handler. */
-            break; /* Assume one handler per command */
+
+            /* Unicast messages target a single node, terminate loop.
+             * Broadcast messages must be delivered to all matching hosted nodes. */
+            if (!is_broadcast) {
+                break;
+            }
         }
     }
 
