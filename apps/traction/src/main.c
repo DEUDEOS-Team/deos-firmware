@@ -23,7 +23,6 @@ int main(void)
     // 2. DEOS core config and init
     struct deos_config d_cfg = {
         .node_id = DEOS_NODE_TRACTION,
-        .can_dev = NULL, // Hardware binding could be added later
         .router_enabled = false,
         .hosted_nodes_enabled = false
     };

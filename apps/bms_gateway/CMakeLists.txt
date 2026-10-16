@@ -9,7 +9,6 @@ target_sources(app PRIVATE
     src/daly_parser.cpp
 
     ../../lib/deos_core/src/deos_core.c
-    ../../lib/deos_core/src/deos_rx.c
     ../../lib/deos_core/src/deos_tx.c
     ../../lib/deos_core/src/deos_dispatch.c
     ../../lib/deos_core/src/deos_codec.c
@@ -18,6 +17,9 @@ target_sources(app PRIVATE
     ../../lib/deos_core/src/deos_fault.c
     ../../lib/deos_core/src/deos_subscription.c
     ../../lib/deos_core/src/deos_frame.c
+    ../../lib/deos_transport_can/src/deos_can_transport.c
+    ../../lib/deos_transport_can/src/deos_can_codec.c
 )
 
 zephyr_include_directories(../../lib/deos_core/include)
+zephyr_include_directories(../../lib/deos_transport_can/include)

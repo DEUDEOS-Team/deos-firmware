@@ -18,18 +18,18 @@ extern "C" {
 int deos_init(const struct deos_config *config);
 
 /**
+ * @brief Get active DEOS core configuration.
+ *
+ * @return Pointer to active configuration.
+ */
+const struct deos_config *deos_get_config(void);
+
+/**
  * @brief Start the DEOS protocol operations (e.g. start threads).
  *
  * @return 0 on success, negative error code on failure.
  */
 int deos_start(void);
-
-/**
- * @brief Check if CAN-FD transport is configured and operational.
- *
- * @return true if a CAN device is bound and initialized, false otherwise.
- */
-bool deos_can_is_available(void);
 
 /**
  * @brief Send a DEOS message.
@@ -189,6 +189,28 @@ typedef int (*deos_transport_tx_fn_t)(const deos_message_t *msg);
  */
 int deos_router_register_transport(deos_transport_t transport,
                                    deos_transport_tx_fn_t tx_fn);
+
+/**
+ * @brief Get the registered transmit function for a transport interface.
+ *
+ * @param transport The transport ID.
+ * @return Function pointer or NULL if not registered.
+ */
+deos_transport_tx_fn_t deos_router_get_transport_tx(deos_transport_t transport);
+
+/**
+ * @brief Set the default transport for outgoing messages on non-router (endpoint) nodes.
+ *
+ * @param transport The default transport ID (e.g. DEOS_TRANSPORT_CAN_FD).
+ */
+void deos_set_default_transport(deos_transport_t transport);
+
+/**
+ * @brief Get the configured default transport for endpoint nodes.
+ *
+ * @return The transport ID or DEOS_TRANSPORT_UNKNOWN.
+ */
+deos_transport_t deos_get_default_transport(void);
 
 /**
  * @brief Lookup function pointer type for dynamic routing.

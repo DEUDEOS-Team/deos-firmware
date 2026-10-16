@@ -37,6 +37,27 @@ int deos_router_register_transport(deos_transport_t transport, deos_transport_tx
     return 0;
 }
 
+deos_transport_tx_fn_t deos_router_get_transport_tx(deos_transport_t transport)
+{
+    if (transport < DEOS_TRANSPORT_COUNT) {
+        return transport_tx_registry[transport];
+    }
+    return NULL;
+}
+
+static deos_transport_t default_transport = DEOS_TRANSPORT_UNKNOWN;
+
+void deos_set_default_transport(deos_transport_t transport)
+{
+    default_transport = transport;
+    LOG_DBG("Default transport set to %s (%d)", deos_transport_name(transport), transport);
+}
+
+deos_transport_t deos_get_default_transport(void)
+{
+    return default_transport;
+}
+
 void deos_route_message(const deos_message_t *msg, deos_transport_t incoming_transport)
 {
     LOG_INF("Router RX: [%s (0x%02X) -> %s (0x%02X)] Cmd: 0x%02X, Len: %d (via %s)",

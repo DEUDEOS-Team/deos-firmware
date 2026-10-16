@@ -1,4 +1,5 @@
 #include <deos/deos.h>
+#include <deos/deos_can.h>
 #include <deos/deos_fault.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -72,19 +73,24 @@ int main(void) {
   LOG_INF("Dummy CAN Node (Diagnostic Tool) Starting...");
 
   struct deos_config config = {.node_id = DEOS_NODE_DIAG_TOOL,
-                               .can_dev =
-                                   DEVICE_DT_GET(DT_CHOSEN(zephyr_can_primary)),
                                .router_enabled = false,
                                .hosted_nodes_enabled = false};
-
-  if (!device_is_ready(config.can_dev)) {
-    LOG_ERR("CAN device not ready");
-    return -1;
-  }
 
   int ret = deos_init(&config);
   if (ret != 0) {
     LOG_ERR("DEOS init failed: %d", ret);
+    return ret;
+  }
+
+  const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_can_primary));
+  if (!device_is_ready(can_dev)) {
+    LOG_ERR("CAN device not ready");
+    return -1;
+  }
+
+  ret = deos_can_transport_init(can_dev);
+  if (ret != 0) {
+    LOG_ERR("CAN transport init failed: %d", ret);
     return ret;
   }
 
@@ -102,6 +108,7 @@ int main(void) {
                         DEOS_CMD_BMS_BALANCING, handle_bms_balancing, NULL);
 
   deos_start();
+  deos_can_transport_start();
 
   int loop_counter = 0;
   while (1) {
