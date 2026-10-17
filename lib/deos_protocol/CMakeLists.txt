@@ -22,4 +22,17 @@ else()
         C_STANDARD_REQUIRED ON
         POSITION_INDEPENDENT_CODE ON
     )
+
+    # Paylaşımlı kütüphane (.so) - Python ctypes ve dinamik bağlayıcılar için
+    add_library(deos_protocol_shared SHARED ${DEOS_PROTOCOL_SOURCES})
+    set_target_properties(deos_protocol_shared PROPERTIES
+        OUTPUT_NAME "deos_protocol"
+        C_STANDARD 99
+        C_STANDARD_REQUIRED ON
+        POSITION_INDEPENDENT_CODE ON
+    )
+    target_include_directories(deos_protocol_shared PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
 endif()

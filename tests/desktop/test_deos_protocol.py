@@ -1,194 +1,99 @@
 #!/usr/bin/env python3
 """
-DEOS Protocol Python Referans ve Doğrulama Betiği
-Bu modül, DEOS Evrensel Çerçeve (Universal Frame 9+N bayt) yapısını
-saf Python (standart library struct) ile kodlama, çözme ve callback tablosu (Registry) mantığını gösterir.
+DEOS Protocol Python Test ve Doğrulama Betiği
+Bu test, doğrudan C kütüphanesini (libdeos_protocol.so) çağıran Python bağlayıcısını (deos.py) test eder.
 """
 
-import struct
-from dataclasses import dataclass
-from typing import Callable, Dict, Tuple, Optional
+import sys
+from pathlib import Path
 
-# ICD Sabitleri (include/deos/deos_icd.h ile birebir eşdeğer)
-DEOS_UNIVERSAL_HEADER_SIZE = 9
-DEOS_PROTOCOL_VERSION = 0x11
-DEOS_MAX_PAYLOAD_LEN = 55
+# lib/deos_protocol/python dizinini sys.path'e ekle
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "lib/deos_protocol/python"))
 
-# Node ID Tanımları
-NODE_GROUND_CONTROL = 0x02
-NODE_MAIN_STM32     = 0x03
-NODE_ROS_BRIDGE     = 0x04
-NODE_TRACTION       = 0x10
-NODE_STEERING       = 0x11
-NODE_BRAKE          = 0x12
-NODE_GLOBAL_BCAST   = 0xFF
+import deos
 
-# Mesaj Sınıfları (Message Class)
-CLASS_SAFETY   = 0x00
-CLASS_COMMAND  = 0x01
-CLASS_STATUS   = 0x02
-CLASS_EVENT    = 0x03
-CLASS_REQUEST  = 0x04
-CLASS_RESPONSE = 0x05
-CLASS_CONFIG   = 0x06
-CLASS_NETWORK  = 0x07
+def test_c_library_bindings():
+    print("=" * 65)
+    print("DEOS Protocol - C Kütüphanesini (libdeos_protocol.so) Çağıran Test")
+    print("=" * 65)
 
-# Servis ID Tanımları
-SERVICE_SYSTEM   = 0x00
-SERVICE_TRACTION = 0x01
-SERVICE_STEERING = 0x02
-SERVICE_BRAKE    = 0x03
-SERVICE_BMS      = 0x04
+    # 1. C String İsim Çözücülerini Doğrula
+    assert deos.DeosMessage(source=deos.NODE_MAIN_STM32).source_name == "MAIN_STM32"
+    assert deos.DeosMessage(source=deos.NODE_TRACTION).source_name == "TRACTION"
+    assert deos.DeosMessage(source=deos.NODE_GROUND_CONTROL).source_name == "GROUND_CONTROL"
+    assert deos.DeosMessage(service=deos.SERVICE_TRACTION).service_name == "TRACTION"
+    assert deos.DeosMessage(service=deos.SERVICE_TRACTION, command=deos.CMD_TRACTION_SET_TARGET_SPEED).command_name == "SET_TARGET_SPEED"
+    print("[1] C String Lookup Fonksiyonları (deos_node_name, deos_command_name vb.) BAŞARILI.")
 
-# Komut Tanımları
-CMD_SYSTEM_PING               = 0x08
-CMD_SYSTEM_PONG               = 0x09
-CMD_TRACTION_SET_TARGET_SPEED = 0x01
-CMD_TRACTION_GET_STATUS       = 0x02
+    # 2. C Little-Endian Codec Fonksiyonlarını Doğrula
+    test_speed = 1500  # RPM
+    encoded_speed_bytes = deos.put_i16_le(test_speed)
+    decoded_speed = deos.get_i16_le(encoded_speed_bytes)
+    assert decoded_speed == 1500
+    assert encoded_speed_bytes == b'\xdc\x05'
+    print(f"[2] C Codec Fonksiyonları (deos_put_i16_le, deos_get_i16_le) BAŞARILI: {decoded_speed} RPM -> {encoded_speed_bytes.hex()}")
 
-
-@dataclass
-class DeosMessage:
-    """DEOS Çekirdek Mesaj Yapısı (deos_message_t)"""
-    destination: int = 0
-    source: int = 0
-    priority: int = 4
-    version: int = DEOS_PROTOCOL_VERSION
-    message_class: int = 0
-    service: int = 0
-    command: int = 0
-    sequence: int = 0
-    payload: bytes = b""
-
-    def encode(self) -> bytes:
-        """
-        Mesajı 9-baytlık Universal Frame başlığı ve payload olarak baytlara serileştirir.
-        Döndürülen veri doğrudan UDP soketine, CAN-FD'ye veya LoRa paketleyicisine verilebilir.
-        """
-        payload_len = len(self.payload)
-        if payload_len > DEOS_MAX_PAYLOAD_LEN:
-            raise ValueError(f"Payload boyutu izin verilen maksimum {DEOS_MAX_PAYLOAD_LEN} bayttan büyük: {payload_len}")
-
-        header = struct.pack(
-            "<BBBBBBBBB",
-            self.destination & 0xFF,
-            self.source & 0xFF,
-            self.priority & 0xFF,
-            self.version & 0xFF,
-            self.message_class & 0xFF,
-            self.service & 0xFF,
-            self.command & 0xFF,
-            self.sequence & 0xFF,
-            payload_len & 0xFF,
-        )
-        return header + self.payload
-
-    @classmethod
-    def decode(cls, data: bytes) -> Optional["DeosMessage"]:
-        """
-        Gelen ham bayt akışından Universal Frame yapısını çözer.
-        """
-        if len(data) < DEOS_UNIVERSAL_HEADER_SIZE:
-            return None
-
-        dest, src, prio, ver, m_class, svc, cmd, seq, plen = struct.unpack(
-            "<BBBBBBBBB", data[:DEOS_UNIVERSAL_HEADER_SIZE]
-        )
-
-        total_expected = DEOS_UNIVERSAL_HEADER_SIZE + plen
-        if len(data) < total_expected:
-            return None  # Çerçeve henüz tamamlanmamış
-
-        payload = data[DEOS_UNIVERSAL_HEADER_SIZE:total_expected]
-        return cls(
-            destination=dest,
-            source=src,
-            priority=prio,
-            version=ver,
-            message_class=m_class,
-            service=svc,
-            command=cmd,
-            sequence=seq,
-            payload=payload,
-        )
-
-
-class DeosRegistry:
-    """
-    C kütüphanesindeki `deos_registry_t` mekanizmasının saf Python karşılığı.
-    (Class, Service, Command) üçlüsüne göre eşleşen callback fonksiyonunu çağırır.
-    """
-    def __init__(self):
-        self._handlers: Dict[Tuple[int, int, int], Callable[[DeosMessage], None]] = {}
-
-    def register(self, message_class: int, service: int, command: int,
-                 callback: Callable[[DeosMessage], None]):
-        self._handlers[(message_class, service, command)] = callback
-
-    def dispatch(self, msg: DeosMessage) -> bool:
-        handler = self._handlers.get((msg.message_class, msg.service, msg.command))
-        if handler:
-            handler(msg)
-            return True
-        return False
-
-
-# --- Test & Örnek Kullanım Senaryosu ---
-def test_protocol_python():
-    print("=" * 60)
-    print("DEOS Protocol Saf Python Doğrulama Testi")
-    print("=" * 60)
-
-    received_data = {}
-
-    def on_traction_status(msg: DeosMessage):
-        # Payload içinde int16 hedef hız ve int16 anlık hız olduğunu varsayalım (Little-Endian)
-        if len(msg.payload) >= 4:
-            target_speed, current_speed = struct.unpack("<hh", msg.payload[:4])
-            received_data["target_speed"] = target_speed
-            received_data["current_speed"] = current_speed
-            print(f"[CALLBACK] Traction Durumu Alındı -> Hedef Hız: {target_speed} RPM, Mevcut Hız: {current_speed} RPM")
-
-    # 1. Registry oluştur ve abone ol
-    registry = DeosRegistry()
-    registry.register(CLASS_STATUS, SERVICE_TRACTION, CMD_TRACTION_GET_STATUS, on_traction_status)
-
-    # 2. Örnek bir Traction Durum Mesajı paketle (Örn: STM32'den ROS Bridge'e gelen telemetri)
-    payload_data = struct.pack("<hh", 1500, 1492)  # Target: 1500 RPM, Actual: 1492 RPM
-    tx_msg = DeosMessage(
-        destination=NODE_ROS_BRIDGE,
-        source=NODE_TRACTION,
-        priority=3,
-        version=DEOS_PROTOCOL_VERSION,
-        message_class=CLASS_STATUS,
-        service=SERVICE_TRACTION,
-        command=CMD_TRACTION_GET_STATUS,
-        sequence=101,
-        payload=payload_data,
+    # 3. C Fonksiyonu `deos_frame_encode` ile Mesaj Paketleme
+    tx_msg = deos.DeosMessage(
+        destination=deos.NODE_TRACTION,
+        source=deos.NODE_GROUND_CONTROL,
+        priority=deos.PRIO_CONTROL,
+        version=deos.DEOS_PROTOCOL_VERSION,
+        message_class=deos.CLASS_COMMAND,
+        service=deos.SERVICE_TRACTION,
+        command=deos.CMD_TRACTION_SET_TARGET_SPEED,
+        sequence=42,
+        payload=encoded_speed_bytes,
     )
 
-    encoded_bytes = tx_msg.encode()
-    print(f"[TX] Kodlanan Çerçeve Boyutu: {len(encoded_bytes)} bayt")
-    print(f"[TX] Ham Veri (Hex): {encoded_bytes.hex()}")
+    wire_bytes = tx_msg.encode()
+    print(f"[3] C deos_frame_encode Çağrıldı! Oluşan Tel Boyutu: {len(wire_bytes)} bayt")
+    print(f"    Ham Veri (Hex): {wire_bytes.hex()}")
 
-    assert len(encoded_bytes) == DEOS_UNIVERSAL_HEADER_SIZE + len(payload_data)
-    assert encoded_bytes[0] == NODE_ROS_BRIDGE
-    assert encoded_bytes[1] == NODE_TRACTION
+    # Universal Frame 9-bayt Başlık Doğrulaması:
+    # Dest: 0x10, Src: 0x02, Prio: 0x02, Ver: 0x11, Class: 0x01, Svc: 0x01, Cmd: 0x01, Seq: 42 (0x2A), Len: 2 (0x02), Payload: dc 05
+    assert len(wire_bytes) == 11
+    assert wire_bytes == bytes.fromhex("100202110101012a02dc05")
 
-    # 3. Alıcı tarafında çöz (Decode) ve Registry üzerinden tetikle
-    rx_msg = DeosMessage.decode(encoded_bytes)
+    # 4. C Fonksiyonu `deos_frame_decode` ile Mesaj Ayrıştırma
+    rx_msg = deos.DeosMessage.decode(wire_bytes)
     assert rx_msg is not None
-    assert rx_msg.destination == NODE_ROS_BRIDGE
-    assert rx_msg.source == NODE_TRACTION
-    assert rx_msg.sequence == 101
+    assert rx_msg.destination == deos.NODE_TRACTION
+    assert rx_msg.source == deos.NODE_GROUND_CONTROL
+    assert rx_msg.sequence == 42
+    assert rx_msg.payload == b'\xdc\x05'
+    print(f"[4] C deos_frame_decode Çağrıldı! Çözülen Mesaj: {rx_msg}")
 
-    dispatched = registry.dispatch(rx_msg)
-    assert dispatched is True
-    assert received_data.get("target_speed") == 1500
-    assert received_data.get("current_speed") == 1492
+    # 5. C Motoru `deos_registry_register` ve `deos_registry_dispatch` Doğrulaması
+    registry = deos.DeosRegistry()
+    received_in_callback = []
 
-    print("[BAŞARILI] Python encode, decode ve registry dispatch testi eksiksiz geçti!\n")
+    def on_traction_speed_command(msg: deos.DeosMessage):
+        speed = deos.get_i16_le(msg.payload)
+        received_in_callback.append(speed)
+        print(f"    >>> Python Callback Tetiklendi (C Dispatcher Üzerinden)! Alınan Hız: {speed} RPM")
 
+    # Python fonksiyonunu C motoruna bağla:
+    reg_ret = registry.register(
+        message_class=deos.CLASS_COMMAND,
+        service=deos.SERVICE_TRACTION,
+        command=deos.CMD_TRACTION_SET_TARGET_SPEED,
+        callback=on_traction_speed_command,
+        target_node=deos.NODE_TRACTION
+    )
+    assert reg_ret == 0
+
+    # C dispatcher'ını tetikle:
+    dispatch_ret = registry.dispatch(rx_msg)
+    assert dispatch_ret == 1  # 1 adet callback eşleşti ve çalıştı
+    assert len(received_in_callback) == 1
+    assert received_in_callback[0] == 1500
+    print("[5] C deos_registry_register ve deos_registry_dispatch Doğrulaması EKSİKSİZ GEÇTİ!")
+
+    print("\n" + "=" * 65)
+    print("SONUÇ: Python, libdeos_protocol C kütüphanesini %100 başarıyla kullandı!")
+    print("=" * 65 + "\n")
 
 if __name__ == "__main__":
-    test_protocol_python()
+    test_c_library_bindings()

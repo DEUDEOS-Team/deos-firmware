@@ -93,78 +93,56 @@ private:
 
 ---
 
-## 3. Python ile Kullanım (Yer Kontrol İstasyonu / Scripting)
+## 3. Python C-Bindings ile Kullanım (Yer İstasyonu & Scripting)
 
-`deos_protocol` çerçeve formatı, Python tarafında ek bir harici kütüphane gerektirmeden standart `struct` modülü ile doğrudan kullanılabilir.
+`deos_protocol`, derlenen `libdeos_protocol.so` paylaşımlı kütüphanesini doğrudan `ctypes` üzerinden çağıran resmi bir Python sarmalayıcısına (`lib/deos_protocol/python/deos.py`) sahiptir. Bu sayede Python kodu protokolü sıfırdan yazmaz; doğrudan C kodundaki encode, decode, codec ve registry fonksiyonlarını çalıştırır.
 
-### Saf Python Örneği (0 Bağımlılık)
+### Python Kodu Örneği
 ```python
-import struct
-from dataclasses import dataclass
-from typing import Optional
+import sys
+sys.path.append("/path/to/deos_firmware/lib/deos_protocol/python")
+import deos
 
-DEOS_UNIVERSAL_HEADER_SIZE = 9
-DEOS_PROTOCOL_VERSION = 0x11
+# 1. C Codec ile Veri Paketleme (Little-Endian int16_t)
+speed_bytes = deos.put_i16_le(1500)  # 1500 RPM
 
-@dataclass
-class DeosMessage:
-    destination: int = 0
-    source: int = 0
-    priority: int = 4
-    version: int = DEOS_PROTOCOL_VERSION
-    message_class: int = 0
-    service: int = 0
-    command: int = 0
-    sequence: int = 0
-    payload: bytes = b""
-
-    def encode(self) -> bytes:
-        """9-baytlık Evrensel Çerçeve başlığı ve payload'ı paketler."""
-        header = struct.pack(
-            "<BBBBBBBBB",
-            self.destination, self.source, self.priority, self.version,
-            self.message_class, self.service, self.command, self.sequence,
-            len(self.payload)
-        )
-        return header + self.payload
-
-    @classmethod
-    def decode(cls, data: bytes) -> Optional["DeosMessage"]:
-        """Ham bayt dizisinden mesajı çözer."""
-        if len(data) < DEOS_UNIVERSAL_HEADER_SIZE:
-            return None
-        dest, src, prio, ver, m_class, svc, cmd, seq, plen = struct.unpack(
-            "<BBBBBBBBB", data[:DEOS_UNIVERSAL_HEADER_SIZE]
-        )
-        if len(data) < DEOS_UNIVERSAL_HEADER_SIZE + plen:
-            return None
-        return cls(dest, src, prio, ver, m_class, svc, cmd, seq, data[9:9+plen])
-
-# Örnek: Yer İstasyonundan Araç Çekiş Düğümüne Hedef Hız Komutu Gönderme
-target_speed = 1500  # RPM (int16_t)
-payload = struct.pack("<h", target_speed)
-
-msg = DeosMessage(
-    destination=0x10,           # DEOS_NODE_TRACTION
-    source=0x02,                # DEOS_NODE_GROUND_CONTROL
-    priority=2,                 # DEOS_PRIO_CONTROL
-    message_class=0x01,         # DEOS_CLASS_COMMAND
-    service=0x01,               # DEOS_SERVICE_TRACTION
-    command=0x01,               # DEOS_CMD_TRACTION_SET_TARGET_SPEED
+# 2. C deos_frame_encode ile Universal Frame Paketleme
+msg = deos.DeosMessage(
+    destination=deos.NODE_TRACTION,
+    source=deos.NODE_GROUND_CONTROL,
+    priority=deos.PRIO_CONTROL,
+    message_class=deos.CLASS_COMMAND,
+    service=deos.SERVICE_TRACTION,
+    command=deos.CMD_TRACTION_SET_TARGET_SPEED,
     sequence=1,
-    payload=payload
+    payload=speed_bytes
 )
 
-wire_bytes = msg.encode()
-# wire_bytes doğrudan UDP soketine, LoRa framing'e veya CAN arayüzüne gönderilebilir!
-```
+wire_bytes = msg.encode()  # Doğrudan C deos_frame_encode() çalışır!
+# wire_bytes: b'\x10\x02\x02\x11\x01\x01\x01\x01\x02\xdc\x05'
 
-> [!TIP]
-> İstenirse `libdeos_protocol` paylaşımlı kütüphane (`.so`) olarak derlenip Python `ctypes` üzerinden de doğrudan C fonksiyonları çağrılabilir.
+# 3. C deos_frame_decode ile Gelen Veriyi Ayrıştırma
+rx_msg = deos.DeosMessage.decode(wire_bytes)  # Doğrudan C deos_frame_decode() çalışır!
+print(f"Hedef: {rx_msg.destination_name}, Komut: {rx_msg.command_name}")
+
+# 4. C deos_registry_t ile Callback Kaydı ve Tetikleme
+registry = deos.DeosRegistry()
+
+def on_speed_command(m: deos.DeosMessage):
+    target_rpm = deos.get_i16_le(m.payload)
+    print(f"Python Callback C'den Tetiklendi: {target_rpm} RPM")
+
+registry.register(deos.CLASS_COMMAND, deos.SERVICE_TRACTION,
+                  deos.CMD_TRACTION_SET_TARGET_SPEED, on_speed_command)
+
+registry.dispatch(rx_msg)  # Doğrudan C deos_registry_dispatch() çalışır!
+```
 
 ---
 
 ## 4. Doğrulama ve Masaüstü Testleri
+
+Masaüstünde Zephyr olmadan saf C/C++ ve Python olarak test etmek için:
 
 ### C++ Masaüstü Testi
 ```bash
@@ -175,7 +153,7 @@ make
 ./desktop_protocol_test
 ```
 
-### Python Masaüstü Testi
+### Python C-Binding Testi
 ```bash
 python3 tests/desktop/test_deos_protocol.py
 ```
