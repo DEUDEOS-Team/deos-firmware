@@ -11,13 +11,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": null,
       "role": "Zephyr RTOS uygulamaları, alt modül manifestosu ve araç ana gömülü kontrol yazılımı.",
-      "status_note": "Protokol katmanları ayrıştırıldı, alt modül entegrasyonu tamamlandı.",
-      "latest_commit": {
-        "hash": "953612b",
-        "author": "emirarkali",
-        "msg": "feat: add status_note field to ecosystem components in responsibilities.json",
-        "date": "17.10.2026"
-      }
+      "status_note": "Protokol katmanları ayrıştırıldı, alt modül entegrasyonu tamamlandı."
     },
     {
       "id": "CORE",
@@ -27,13 +21,7 @@
       "repo": "DEUDEOS-Team/deos-core",
       "path": null,
       "role": "Split-Horizon yönlendirici motoru, telemetri abonelikleri ve mandallanan arıza tablosu.",
-      "status_note": "Çekirdek yapısı protokolden ayrıldı, geliştirmeler devam ediyor.",
-      "latest_commit": {
-        "hash": "a40b4d2",
-        "author": "emirarkali",
-        "msg": "Merge branch 'feature/protocol-decoupling' into main",
-        "date": "17.10.2026"
-      }
+      "status_note": "Çekirdek yapısı protokolden ayrıldı, geliştirmeler devam ediyor."
     },
     {
       "id": "PROTO",
@@ -43,13 +31,7 @@
       "repo": "DEUDEOS-Team/deos-protocol",
       "path": null,
       "role": "ANSI C99 Universal Frame (9-bayt), taşınabilir codec ve Python C-Bindings kütüphanesi.",
-      "status_note": "Universal Frame codec ve Python C-Bindings bağımsız kütüphane haline getirildi.",
-      "latest_commit": {
-        "hash": "fc3ac4e",
-        "author": "emirarkali",
-        "msg": "chore: add .gitignore for python cache and build artifacts",
-        "date": "17.10.2026"
-      }
+      "status_note": "Universal Frame codec ve Python C-Bindings bağımsız kütüphane haline getirildi."
     },
     {
       "id": "CAN",
@@ -59,13 +41,7 @@
       "repo": "DEUDEOS-Team/deos-transport-can",
       "path": null,
       "role": "STM32 FDCAN çevre birimi sürücüsü ve 29-bit CAN ID filtreleme motoru.",
-      "status_note": "STM32 FDCAN çevre birimi sürücüsü ayrıştırıldı, testler sürüyor.",
-      "latest_commit": {
-        "hash": "56ef31e",
-        "author": "emirarkali",
-        "msg": "docs: move 29-bit CAN ID spec from deos_core to deos_transport_can and keep core media-agnostic",
-        "date": "16.10.2026"
-      }
+      "status_note": "STM32 FDCAN çevre birimi sürücüsü ayrıştırıldı, testler sürüyor."
     },
     {
       "id": "DOCS",
@@ -75,13 +51,7 @@
       "repo": "DEUDEOS-Team/deos-docs",
       "path": null,
       "role": "Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları.",
-      "status_note": "Resmi LaTeX ICD dokümanları ve şartnameler güncellendi.",
-      "latest_commit": {
-        "hash": "590f922",
-        "author": "emirarkali",
-        "msg": "docs(icd): synchronize hardware types with deos_types.h",
-        "date": "16.10.2026"
-      }
+      "status_note": "Resmi LaTeX ICD dokümanları ve şartnameler güncellendi."
     },
     {
       "id": "GCS",
@@ -91,13 +61,7 @@
       "repo": "DEUDEOS-Team/deos-ground-station",
       "path": null,
       "role": "PyQt tabanlı telemetri izleme ve araç komuta kontrol masaüstü yazılımı.",
-      "status_note": "PyQt telemetri arayüzü ve LoRa haberleşmesi aktif, saha testleri yapılıyor.",
-      "latest_commit": {
-        "hash": "3f62e91",
-        "author": "Alper Bora",
-        "msg": "fix(web-ui): mount static files as volume and add cache busting",
-        "date": "15.10.2026"
-      }
+      "status_note": "PyQt telemetri arayüzü ve LoRa haberleşmesi aktif, saha testleri yapılıyor."
     },
     {
       "id": "ROS",
@@ -107,13 +71,7 @@
       "repo": "DEUDEOS-Team/deos-ros2-bridge",
       "path": null,
       "role": "Raspberry Pi üzerinde koşan ROS 2 Humble ile araç içi CAN köprüsü.",
-      "status_note": "ROS 2 Humble Ethernet köprüsü geliştirildi, testler sürüyor.",
-      "latest_commit": {
-        "hash": "861f608",
-        "author": "SepiJzadeh",
-        "msg": "docs: add comprehensive README, gitignore, and benchmark suite",
-        "date": "14.10.2026"
-      }
+      "status_note": "ROS 2 Humble Ethernet köprüsü geliştirildi, testler sürüyor."
     },
     {
       "id": "BRIDGE",
@@ -123,13 +81,7 @@
       "repo": "DEUDEOS-Team/deos-ros2-bridge",
       "path": null,
       "role": "Raspberry Pi üzerinde koşan ROS 2 Humble ile Main STM32 Router arasındaki Ethernet köprüsü.",
-      "status_note": "Raspberry Pi ile STM32 Router arasındaki donanımsal Ethernet köprüsü devrede.",
-      "latest_commit": {
-        "hash": "861f608",
-        "author": "SepiJzadeh",
-        "msg": "docs: add comprehensive README, gitignore, and benchmark suite",
-        "date": "14.10.2026"
-      }
+      "status_note": "Raspberry Pi ile STM32 Router arasındaki donanımsal Ethernet köprüsü devrede."
     },
     {
       "id": "PORTAL",
@@ -139,13 +91,7 @@
       "repo": "DEUDEOS-Team/deos-software-development-page",
       "path": null,
       "role": "Canlı mimari şeması, alt modül haritası ve commit takip web sitesi.",
-      "status_note": "Dinamik JSON konfigürasyonu ve canlı GitHub API entegrasyonu tamamlandı.",
-      "latest_commit": {
-        "hash": "d93cbb2",
-        "author": "emirarkali",
-        "msg": "feat(ui): add status_note field and display in popover and table",
-        "date": "17.10.2026"
-      }
+      "status_note": "Dinamik JSON konfigürasyonu ve canlı GitHub API entegrasyonu tamamlandı."
     },
     {
       "id": "RPI",
@@ -165,13 +111,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/main_node",
       "role": "Araç içi merkezi ağ geçidi ve yönlendirici (Nucleo-H563ZI).",
-      "status_note": "Router motoru ve Split-Horizon yönlendirici devrede, saha testleri yapılıyor.",
-      "latest_commit": {
-        "hash": "49aa9d5",
-        "author": "emirarkali",
-        "msg": "refactor(protocol): rename deos_dispatcher to deos_registry for clearer separation of concerns",
-        "date": "17.10.2026"
-      }
+      "status_note": "Router motoru ve Split-Horizon yönlendirici devrede, saha testleri yapılıyor."
     },
     {
       "id": "LORA",
@@ -181,13 +121,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/main_node/src/transport/uart_lora.cpp",
       "role": "Ebyte E220 UART LoRa modülü sürücüsü ve paket yönlendirme.",
-      "status_note": "Ebyte E220 UART sürücüsü yazıldı, telemetri testleri devam ediyor.",
-      "latest_commit": {
-        "hash": "91f235a",
-        "author": "emirarkali",
-        "msg": "feat(fault): expand fault registry into specific subsystem categories (Router, CAN, LoRa, Ethernet, Dispatcher) with human-readable string mapping",
-        "date": "16.10.2026"
-      }
+      "status_note": "Ebyte E220 UART sürücüsü yazıldı, telemetri testleri devam ediyor."
     },
     {
       "id": "CAN_BUS",
@@ -197,13 +131,7 @@
       "repo": "DEUDEOS-Team/deos-transport-can",
       "path": null,
       "role": "Araç içi 5 Mbps yüksek hızlı diferansiyel CAN-FD veri yolu omurgası.",
-      "status_note": "5 Mbps diferansiyel CAN-FD fiziksel omurgası aktif.",
-      "latest_commit": {
-        "hash": "56ef31e",
-        "author": "emirarkali",
-        "msg": "docs: move 29-bit CAN ID spec from deos_core to deos_transport_can and keep core media-agnostic",
-        "date": "16.10.2026"
-      }
+      "status_note": "5 Mbps diferansiyel CAN-FD fiziksel omurgası aktif."
     },
     {
       "id": "TRACTION",
@@ -213,13 +141,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/traction",
       "role": "Çekiş / İnvertör kontrolü, tork ve hız talepleri (CAN ID: 0x10).",
-      "status_note": "Tork ve hız kontrol algoritmaları test ediliyor.",
-      "latest_commit": {
-        "hash": "ba2df01",
-        "author": "emirarkali",
-        "msg": "feat(protocol): decouple portable deos_protocol layer with standalone dispatcher",
-        "date": "17.10.2026"
-      }
+      "status_note": "Tork ve hız kontrol algoritmaları test ediliyor."
     },
     {
       "id": "BRAKE",
@@ -229,13 +151,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/brake",
       "role": "Fren aktüatörü kontrolü, hidrolik basınç ve güvenlik mandalı.",
-      "status_note": "Fren aktüatörü kontrolü ve hidrolik basınç güvenliği devrede.",
-      "latest_commit": {
-        "hash": "1fed144",
-        "author": "emirarkali",
-        "msg": "refactor: apply standardized overlay architecture to all apps",
-        "date": "07.10.2026"
-      }
+      "status_note": "Fren aktüatörü kontrolü ve hidrolik basınç güvenliği devrede."
     },
     {
       "id": "STEERING",
@@ -245,13 +161,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/steering",
       "role": "Steer-by-Wire direksiyon açı kontrolü ve enkoder takibi (CAN ID: 0x11).",
-      "status_note": "Steer-by-Wire açı kontrolü ve enkoder geri beslemesi optimize ediliyor.",
-      "latest_commit": {
-        "hash": "1fed144",
-        "author": "emirarkali",
-        "msg": "refactor: apply standardized overlay architecture to all apps",
-        "date": "07.10.2026"
-      }
+      "status_note": "Steer-by-Wire açı kontrolü ve enkoder geri beslemesi optimize ediliyor."
     },
     {
       "id": "BMS_GW",
@@ -261,13 +171,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/bms_gateway",
       "role": "Batarya yönetim sistemi ağ geçidi, hücre voltaj ve sıcaklık takibi (CAN ID: 0x30).",
-      "status_note": "Hücre voltaj okuma ve güvenlik eşikleri devrede, donanım testleri sürüyor.",
-      "latest_commit": {
-        "hash": "ba2df01",
-        "author": "emirarkali",
-        "msg": "feat(protocol): decouple portable deos_protocol layer with standalone dispatcher",
-        "date": "17.10.2026"
-      }
+      "status_note": "Hücre voltaj okuma ve güvenlik eşikleri devrede, donanım testleri sürüyor."
     },
     {
       "id": "BT",
