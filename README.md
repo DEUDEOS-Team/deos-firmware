@@ -8,67 +8,81 @@ Proje, donanım bağımsız (hardware-agnostic) bir yapıda geliştirilmiş olup
 
 ## 🏛️ Dağıtık Sistem Mimarisi ve Ekosistem Ağacı
 
-DEOS ekosistemi; gömülü mikrodenetleyiciler (STM32), otonomi bilgisayarı (Raspberry Pi / Jetson), CAN-FD omurgası (Backbone), LoRa telemetri ve yer kontrol istasyonundan oluşan dağıtık bir araç ağı mimarisine sahiptir:
+## 1. 🏛️ Yazılım ve Git Alt Modül Mimarisi
+
+DEOS ekosistemi; modüler Git alt modülleri ve ekip sorumluluk dağılımına sahiptir:
 
 ```mermaid
 graph TD
     classDef root fill:#1f6feb,stroke:#388bfd,stroke-width:2px,color:#ffffff;
     classDef sub fill:#238636,stroke:#2ea043,stroke-width:1.5px,color:#ffffff;
     classDef dev fill:#8957e5,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
-    classDef hw fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#e6edf3;
-    classDef bus fill:#0969da,stroke:#54aeff,stroke-width:3px,color:#ffffff;
-    classDef node fill:#21262d,stroke:#6e7681,stroke-width:1.5px,color:#e6edf3;
+    classDef ext fill:#d29922,stroke:#bb8009,stroke-width:1.5px,color:#ffffff;
 
-    subgraph REPOS ["Yazılım ve Depo Mimarisi"]
-        FW["deos-firmware (Ana Depo)"]:::root
-        CORE["lib/deos_core (Router & Düğüm Motoru)"]:::sub
-        PROTO["lib/deos_protocol (Universal Frame & Codec)"]:::sub
-        CAN_DRV["lib/deos_transport_can (CAN-FD Sürücüsü)"]:::sub
-        DOCS["docs (Merkezi Şartnameler & ICD)"]:::sub
+    FW["deos-firmware<br/>(Ana Sistem / Zephyr RTOS)"]:::root
 
-        FW -->|"Submodule"| CORE
-        FW -->|"Submodule"| PROTO
-        FW -->|"Submodule"| CAN_DRV
-        FW -->|"Submodule"| DOCS
+    FW -->|"Submodule (lib/deos_core)"| CORE["deos-core<br/>(Router & Düğüm Motoru)"]:::sub
+    FW -->|"Submodule (lib/deos_protocol)"| PROTO["deos-protocol<br/>(Universal Frame & Codec)"]:::sub
+    FW -->|"Submodule (lib/deos_transport_can)"| CAN["deos-transport-can<br/>(STM32 CAN-FD Sürücüsü)"]:::sub
+    FW -->|"Submodule (docs)"| DOCS["deos-docs<br/>(Merkezi ICD & Şartnameler)"]:::sub
 
-        DEV_EMIR["Emir Arkalı (Core Mimarisi)"]:::dev
-        DEV_CAN["Donanım / CAN Ekibi (FDCAN Sürücüsü)"]:::dev
-        CORE --- DEV_EMIR
-        CAN_DRV --- DEV_CAN
-    end
+    PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(Jetson / Otonomi)"]:::ext
+    PROTO -.->|"Python Bindings"| GCS["deos-ground-station<br/>(Yer Kontrol İstasyonu)"]:::ext
 
-    subgraph HARDWARE ["Donanım ve Haberleşme Topolojisi"]
-        MAIN["Main STM32 Router"]:::root
-        RPI["Raspberry Pi / Jetson (ROS 2)"]:::hw
-        BT["Bluetooth Modülü"]:::hw
-        JOY["Manuel Kumanda (Gamepad)"]:::hw
-        LORA["LoRa Modülü"]:::hw
-        GCS["Ground Station (deos-ground-station)"]:::hw
+    DEV_EMIR["Emir Arkalı<br/>(Core Mimarisi & Router)"]:::dev
+    DEV_CAN["Donanım / CAN Ekibi<br/>(FDCAN Sürücüsü)"]:::dev
+    DEV_GCS["Yer İstasyonu Ekibi<br/>(Telemetri GUI)"]:::dev
 
-        RPI <-->|"Ethernet"| MAIN
-        JOY -.->|"Bluetooth"| BT
-        BT <-->|"UART"| MAIN
-        MAIN <-->|"UART"| LORA
-        LORA -.->|"RF Link"| GCS
+    CORE --- DEV_EMIR
+    CAN --- DEV_CAN
+    GCS --- DEV_GCS
+```
 
-        CAN_BUS["CAN-FD Backbone"]:::bus
-        TRACTION["Traction (Motor / İnvertör)"]:::node
-        BRAKE["Brake (Fren)"]:::node
-        STEERING["Steering (Direksiyon)"]:::node
-        BMS_GW["BMS Gateway"]:::node
-        BMS1["BMS 1"]:::node
-        BMS2["BMS 2"]:::node
+---
 
-        MAIN <-->|"CAN-FD"| CAN_BUS
-        CAN_BUS <--> TRACTION
-        CAN_BUS <--> BRAKE
-        CAN_BUS <--> STEERING
-        CAN_BUS <--> BMS_GW
-        BMS_GW <--> BMS1
-        BMS_GW <--> BMS2
-    end
+## 2. 🚗 Araç İçi Donanım ve Haberleşme Topolojisi
 
-    CORE -.->|"İcra Donanımı"| MAIN
+Host bilgisayar, kablosuz telemetri hatları ve CAN-FD omurgası üzerindeki donanım düğümleri:
+
+```mermaid
+graph TD
+    classDef mcu fill:#1f6feb,stroke:#388bfd,stroke-width:2.5px,color:#ffffff;
+    classDef host fill:#21262d,stroke:#6e7681,stroke-width:1.5px,color:#f0f6fc;
+    classDef rf fill:#793ed4,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
+    classDef can fill:#238636,stroke:#3fb950,stroke-width:1.5px,color:#ffffff;
+    classDef bms fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#c9d1d9;
+    classDef bus fill:#0969da,stroke:#54aeff,stroke-width:4px,color:#ffffff;
+
+    RPI["Raspberry Pi / Jetson<br/>(Otonom Sürüş / ROS 2)"]:::host
+    MAIN["Main STM32<br/>(Router)"]:::mcu
+
+    JOY["Manuel Kumanda<br/>(Gamepad)"]:::host
+    BT["Bluetooth Modülü<br/>(HC-05 / BLE)"]:::rf
+
+    LORA["LoRa Modülü<br/>(SX1262)"]:::rf
+    GCS["Ground Control<br/>(deos-ground-station)"]:::host
+
+    RPI <-->|"Ethernet"| MAIN
+    JOY -.->|"Bluetooth"| BT
+    BT <-->|"UART"| MAIN
+    MAIN <-->|"UART"| LORA
+    LORA -.->|"RF"| GCS
+
+    CAN_BUS["CAN-FD Backbone"]:::bus
+    TRACTION["Traction<br/>(Motor / İnvertör)"]:::can
+    BRAKE["Brake<br/>(Fren)"]:::can
+    STEERING["Steering<br/>(Direksiyon)"]:::can
+    BMS_GW["BMS Gateway"]:::can
+    BMS1["BMS 1"]:::bms
+    BMS2["BMS 2"]:::bms
+
+    MAIN <-->|"CAN-FD"| CAN_BUS
+    CAN_BUS <--> TRACTION
+    CAN_BUS <--> BRAKE
+    CAN_BUS <--> STEERING
+    CAN_BUS <--> BMS_GW
+    BMS_GW <--> BMS1
+    BMS_GW <--> BMS2
 ```
 
 ---
