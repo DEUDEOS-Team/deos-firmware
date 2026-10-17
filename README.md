@@ -6,11 +6,9 @@ Proje, donanım bağımsız (hardware-agnostic) bir yapıda geliştirilmiş olup
 
 ---
 
-## 🏛️ Dağıtık Sistem Mimarisi ve Ekosistem Ağacı
+## 1. Yazılım ve Git Alt Modül Mimarisi
 
-## 1. 🏛️ Yazılım ve Git Alt Modül Mimarisi
-
-DEOS ekosistemi; modüler Git alt modülleri ve ekip sorumluluk dağılımına sahiptir:
+DEOS ekosistemi; modüler Git alt modülleri ve sistem mimarisine sahiptir:
 
 ```mermaid
 graph TD
@@ -20,18 +18,18 @@ graph TD
 
     FW["deos-firmware<br/>(Ana Sistem / Zephyr RTOS)"]:::root
 
-    FW -->|"Submodule (lib/deos_core)"| CORE["deos-core<br/>(Router & Düğüm Motoru)"]:::sub
-    FW -->|"Submodule (lib/deos_protocol)"| PROTO["deos-protocol<br/>(Universal Frame & Codec)"]:::sub
-    FW -->|"Submodule (lib/deos_transport_can)"| CAN["deos-transport-can<br/>(STM32 CAN-FD Sürücüsü)"]:::sub
-    FW -->|"Submodule (docs)"| DOCS["deos-docs<br/>(Merkezi ICD & Şartnameler)"]:::sub
+    FW -->|"Submodule"| CORE["deos-core<br/>(Router)"]:::sub
+    FW -->|"Submodule"| PROTO["deos-protocol<br/>(Protokol & Codec)"]:::sub
+    FW -->|"Submodule"| CAN["deos-transport-can<br/>(CAN-FD Sürücüsü)"]:::sub
+    FW -->|"Submodule"| DOCS["deos-docs<br/>(ICD & Belgeler)"]:::sub
 
-    PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(Raspberry Pi Köprüsü)"]:::ext
-    PROTO -.->|"Python Bindings"| GCS["deos-ground-station<br/>(Yer Kontrol İstasyonu)"]:::ext
+    PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(ROS 2 Köprüsü)"]:::ext
+    PROTO -.->|"Python Bindings"| GCS["deos-ground-station<br/>(Yer İstasyonu)"]:::ext
 ```
 
 ---
 
-## 2. 🚗 Araç İçi Donanım ve Haberleşme Topolojisi
+## 2. Araç İçi Donanım ve Haberleşme Topolojisi
 
 Host bilgisayar, kablosuz telemetri hatları ve CAN-FD omurgası üzerindeki donanım düğümleri:
 
@@ -39,21 +37,24 @@ Host bilgisayar, kablosuz telemetri hatları ve CAN-FD omurgası üzerindeki don
 graph TD
     classDef mcu fill:#1f6feb,stroke:#388bfd,stroke-width:2.5px,color:#ffffff;
     classDef host fill:#21262d,stroke:#6e7681,stroke-width:1.5px,color:#f0f6fc;
+    classDef bridge fill:#d29922,stroke:#bb8009,stroke-width:1.5px,color:#ffffff;
     classDef rf fill:#793ed4,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
     classDef can fill:#238636,stroke:#3fb950,stroke-width:1.5px,color:#ffffff;
     classDef bms fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#c9d1d9;
     classDef bus fill:#0969da,stroke:#54aeff,stroke-width:4px,color:#ffffff;
 
-    RPI["Raspberry Pi<br/>(Otonom Sürüş / ROS 2)"]:::host
+    RPI["Raspberry Pi<br/>(ROS 2)"]:::host
+    BRIDGE["deos-ros2-bridge<br/>(Köprü)"]:::bridge
     MAIN["Main STM32<br/>(Router)"]:::mcu
 
-    JOY["Manuel Kumanda<br/>(Gamepad)"]:::host
+    JOY["Manuel Kumanda"]:::host
     BT["Bluetooth Modülü"]:::rf
 
     LORA["LoRa Modülü<br/>(Ebyte E220)"]:::rf
     GCS["Ground Control<br/>(deos-ground-station)"]:::host
 
-    RPI <-->|"Ethernet"| MAIN
+    RPI <-->|"ROS 2 Topics"| BRIDGE
+    BRIDGE <-->|"Ethernet"| MAIN
     JOY -.->|"Bluetooth"| BT
     BT <-->|"UART"| MAIN
     MAIN <-->|"UART"| LORA
@@ -78,7 +79,7 @@ graph TD
 
 ---
 
-## 📦 Ekosistem Depoları ve Sorumluluk Tablosu
+## Ekosistem Depoları ve Sorumluluk Tablosu
 
 DEOS projesi modüler bir mimaride yönetilmektedir:
 
@@ -86,13 +87,14 @@ DEOS projesi modüler bir mimaride yönetilmektedir:
 | :--- | :--- | :--- | :--- |
 | [**`deos-firmware`**](https://github.com/DEUDEOS-Team/deos-firmware) | Ana Depo | **Emir Arkalı** | Zephyr RTOS uygulamaları ve alt modül manifestosu |
 | [**`deos-core`**](https://github.com/DEUDEOS-Team/deos-core) | Alt Modül (`lib/deos_core`) | **Emir Arkalı** | Split-Horizon yönlendirici motoru, telemetri abonelikleri ve arıza tablosu |
-| [**`deos-protocol`**](https://github.com/DEUDEOS-Team/deos-protocol) | Alt Modül (`lib/deos_protocol`) | **Ortak Protokol / Emir Arkalı** | ANSI C99 Universal Frame codec ve Python C-Bindings kütüphanesi |
-| [**`deos-transport-can`**](https://github.com/DEUDEOS-Team/deos-transport-can) | Alt Modül (`lib/deos_transport_can`) | **Donanım / CAN Ekibi** | STM32 FDCAN sürücüsü ve 29-bit CAN ID filtreleme motoru |
+| [**`deos-protocol`**](https://github.com/DEUDEOS-Team/deos-protocol) | Alt Modül (`lib/deos_protocol`) | **Emir Arkalı** | ANSI C99 Universal Frame codec ve Python C-Bindings kütüphanesi |
+| [**`deos-transport-can`**](https://github.com/DEUDEOS-Team/deos-transport-can) | Alt Modül (`lib/deos_transport_can`) | **Emir Arkalı** | STM32 FDCAN sürücüsü ve 29-bit CAN ID filtreleme motoru |
 | [**`deos-ground-station`**](https://github.com/DEUDEOS-Team/deos-ground-station) | Yer Kontrol İstasyonu | **Alper Bora** | PyQt tabanlı telemetri ve komuta kontrol masaüstü yazılımı |
 | [**`deos-ros2-bridge`**](https://github.com/DEUDEOS-Team/deos-ros2-bridge) | Otonomi Köprüsü | **Sepehr Jafarzadeh** | Raspberry Pi üzerinde koşan ROS 2 Humble ile araç içi CAN köprüsü |
-| **`BMS Gateway & BMS 1-2`** | `apps/bms_gateway` | **Ayşe Ceren Akdamar** | Batarya yönetim sistemi, hücre voltaj ve sıcaklık takibi |
+| **`Raspberry Pi (ROS 2)`** | Otonomi Bilgisayarı | **Arda Efe Yılmaz** | Otonom sürüş algoritmaları, sensör füzyonu ve ROS 2 paketleri |
 | **`Traction, Brake, Steering`** | `apps/traction`, `apps/steering` | **Alper Altındaş** | Çekiş / İnvertör kontrolü, frenleme ve Steer-by-Wire direksiyon |
-| [**`deos-docs`**](https://github.com/DEUDEOS-Team/deos-docs) | Alt Modül (`docs`) | **Dokümantasyon Ekibi** | Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları |
+| **`BMS Gateway, BMS 1, BMS 2`** | `apps/bms_gateway` | **Ayşe Ceren Akdamar** | Batarya yönetim sistemi, hücre voltaj ve sıcaklık takibi |
+| [**`deos-docs`**](https://github.com/DEUDEOS-Team/deos-docs) | Alt Modül (`docs`) | **Emir Arkalı** | Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları |
 
 ---
 
