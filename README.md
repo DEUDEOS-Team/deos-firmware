@@ -8,82 +8,63 @@ Proje, donanım bağımsız (hardware-agnostic) bir yapıda geliştirilmiş olup
 
 ## 🏛️ Dağıtık Sistem Mimarisi ve Ekosistem Ağacı
 
-DEOS ekosistemi; gömülü mikrodenetleyiciler (STM32), otonomi bilgisayarı (ROS 2 / Jetson), yer kontrol istasyonu ve dokümantasyon birimlerinin bağımsız yönetildiği modüler bir **Git Submodule** mimarisine sahiptir:
+DEOS ekosistemi; gömülü mikrodenetleyiciler (STM32), otonomi bilgisayarı (Raspberry Pi / Jetson), CAN-FD omurgası (Backbone), LoRa telemetri ve yer kontrol istasyonundan oluşan dağıtık bir araç ağı mimarisine sahiptir:
 
 ```mermaid
 graph TD
-    classDef main fill:#1f6feb,stroke:#388bfd,stroke-width:2px,color:#fff;
-    classDef sub fill:#238636,stroke:#2ea043,stroke-width:2px,color:#fff;
-    classDef dev fill:#8957e5,stroke:#a371f7,stroke-width:2px,color:#fff;
-    classDef ext fill:#d29922,stroke:#bb8009,stroke-width:2px,color:#fff;
+    classDef mcu fill:#1d4ed8,stroke:#60a5fa,stroke-width:3px,color:#ffffff;
+    classDef host fill:#0f172a,stroke:#94a3b8,stroke-width:2px,color:#ffffff;
+    classDef rf fill:#581c87,stroke:#c084fc,stroke-width:2px,color:#ffffff;
+    classDef can fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef bms fill:#1e293b,stroke:#64748b,stroke-width:1.5px,color:#cbd5e1;
+    classDef bus fill:#0284c7,stroke:#38bdf8,stroke-width:5px,color:#ffffff;
 
-    FW["🏎️ deos-firmware (Ana Sistem / MCU)<br/><i>Zephyr RTOS Uygulamaları</i>"]:::main
+    %% 1. Otonom Hesaplama Ünitesi
+    PI["🍓 Raspberry Pi / Jetson<br/><b>Otonom Sürüş & ROS 2</b>"]:::host
+    PI <== "Ethernet" ==> MAIN
 
-    %% Submodules
-    FW -->|"Submodule (lib/deos_core)"| CORE["🧠 deos-core<br/>(Router, Subscription, Fault Motoru)"]:::sub
-    FW -->|"Submodule (lib/deos_protocol)"| PROTO["📦 deos-protocol<br/>(Universal Frame, Codec, ICD)"]:::sub
-    FW -->|"Submodule (lib/deos_transport_can)"| CAN["🔌 deos-transport-can<br/>(STM32 CAN-FD Sürücüsü)"]:::sub
-    FW -->|"Submodule (docs)"| DOCS["📑 deos-docs<br/>(LaTeX ICD & Mimari Şartnameler)"]:::sub
+    %% 2. Merkez: Main STM32 Router
+    MAIN["🧠 Main STM32<br/><b>Router & Gateway (deos-core)</b>"]:::mcu
 
-    %% Harici Bağlı Sistemler
-    PROTO -.->|"Saf C/C++ Bağı"| ROS["🤖 deos-ros2-bridge<br/>(Jetson / Otonom Sürüş)"]:::ext
-    PROTO -.->|"Python C-Bindings"| GCS["💻 deos-ground-control<br/>(Yer Kontrol İstasyonu)"]:::ext
+    %% 3. Sol Kısım: Kumanda & Bluetooth
+    JOY["🎮 Manuel Kumanda<br/><i>(Gamepad / RC Controller)</i>"]:::host
+    BT["📶 Bluetooth Modülü<br/><i>(HC-05 / BLE)</i>"]:::rf
+    JOY <.. "Bluetooth" ..> BT
+    BT <== "UART" ==> MAIN
 
-    %% Ekip Sorumluluk Dağılımı
-    CORE --- DEV_EMIR["👤 Emir Arkalı<br/><i>(Core Mimarisi & Router)</i>"]:::dev
-    CAN --- DEV_CAN["👤 Donanım / CAN Ekibi<br/><i>(FDCAN Sürücüsü)</i>"]:::dev
-    ROS --- DEV_ROS["👤 ROS 2 Ekibi<br/><i>(Köprü & Sensör Verileri)</i>"]:::dev
-    GCS --- DEV_GCS["👤 Yer İstasyonu Ekibi<br/><i>(Telemetri GUI)</i>"]:::dev
+    %% 4. Sağ Kısım: LoRa & Ground Control (deos-ground-station)
+    LORA["📡 LoRa Modülü<br/><i>(SX1262 Telemetri)</i>"]:::rf
+    GCS["💻 Ground Control<br/><b><a href='https://github.com/DEUDEOS-Team/deos-ground-station'>deos-ground-station</a></b><br/><i>(Telemetri & GUI)</i>"]:::host
+    MAIN <== "UART" ==> LORA
+    LORA <.. "RF Link (LoRa)" ..> GCS
+
+    %% 5. Alt Kısım: CAN-FD Backbone Veri Yolu
+    MAIN <== "TX / RX" ==> BUS["══════════════════════════════════ CAN-FD Backbone ══════════════════════════════════"]:::bus
+
+    %% 6. CAN Hattına Bağlı Düğümler
+    BUS <==> TRACTION["⚙️ Traction<br/><b>Motor / İnvertör</b>"]:::can
+    BUS <==> BRAKE["🛑 Brake<br/><b>Fren Sistemi</b>"]:::can
+    BUS <==> STEERING["🎯 Steering<br/><b>Steer-by-Wire</b>"]:::can
+    BUS <==> BMS_GW["🔋 BMS Gateway<br/><b>Batarya Ağ Geçidi</b>"]:::can
+
+    %% 7. Batarya Hücre Paketleri
+    BMS_GW <--> BMS1["🔋 BMS 1 (Master Paket)"]:::bms
+    BMS_GW <--> BMS2["🔋 BMS 2 (Slave Paket)"]:::bms
 ```
 
 ---
 
-## 📦 Alt Modüller (Git Submodules) ve Depo Sözlüğü
+## 📦 Ekosistem Depoları ve Git Alt Modülleri
 
-DEOS projesi "Monorepo" karmaşasını önlemek ve her birimin yalnızca ihtiyacı olan kodları çekmesini sağlamak amacıyla 4 bağımsız depoya ayrılmıştır:
+DEOS projesi "Monorepo" karmaşasını önlemek amacıyla bağımsız depolara ayrılmıştır:
 
-### 1. 🧠 [`lib/deos_core`](https://github.com/DEUDEOS-Team/deos-core) (Düğüm İcra Motoru)
-- **Rol:** STM32 üzerindeki işletim motorudur. Zephyr RTOS'a bağlıdır.
-- **Sorumluluklar:**
-  - **Router (Yönlendirici):** Split-Horizon kuralları ile CAN, LoRa, Ethernet ve Yerel kuyruklar arasında sıfır gecikmeli paket aktarımı.
-  - **Subscription Engine (Abonelik Motoru):** Periyodik veya Olay Tabanlı (On-Change) telemetri dağıtımı ve TTL kontrolü.
-  - **Fault Registry (Hata Tablosu):** Düğüm bazında mandallanan arıza kayıtları ve `GET_FAULTS` akışı.
-  - **Hosted Local Nodes:** Tek bir MCU üzerinde birden fazla mantıksal düğüm çalıştırma yeteneği.
-
-### 2. 📦 [`lib/deos_protocol`](https://github.com/DEUDEOS-Team/deos-protocol) (İletişim & Tel Protokolü)
-- **Rol:** Saf ANSI C99 (Zero-Dependency) tel protokolü ve serileştirme kütüphanesidir.
-- **Sorumluluklar:**
-  - **Universal Frame:** 9-baytlık ortamdan bağımsız paket kodlama/çözme (`UNIVERSAL_9B`).
-  - **Portable Codec:** Donanım bağımsız Little-Endian bayt paketleme (`deos_put_u16_le` vb.).
-  - **Registry Engine:** Dinamik bellek (`malloc`) kullanmayan reentrant mesaj işleyici tablosu.
-  - **Python C-Bindings:** `python/deos.py` ile yer istasyonu ve test scriptlerinin C kütüphanesini doğrudan çalıştırması.
-  - **Kullanıcılar:** STM32, ROS 2 C++ köprüsü, Yer İstasyonu (Python/Qt) ve test betikleri.
-
-### 3. 🔌 [`lib/deos_transport_can`](https://github.com/DEUDEOS-Team/deos-transport-can) (CAN-FD Sürücüsü)
-- **Rol:** CAN-FD donanım katmanının çekirdekten izole edilmiş taşıyıcı sürücüsüdür.
-- **Sorumluluklar:**
-  - **29-bit CAN ID Maskeleme:** Öncelik (Priority), Sınıf (Class), Servis, Hedef ve Kaynak bitlerinin CAN çerçevesine paketlenmesi.
-  - **Donanımsal Filtreler:** STM32 FDCAN donanım filtrelerinin otomatik kurulumu.
-  - **Non-blocking TX/RX:** Mesaj kuyrukları ile kesintisiz bus iletişimi.
-
-### 4. 📑 [`docs`](https://github.com/DEUDEOS-Team/deos-docs) (Merkezi Dokümantasyon & ICD)
-- **Rol:** Araç içi ve araç dışı haberleşme standartlarının resmi şartname deposudur.
-- **Sorumluluklar:**
-  - **Resmi LaTeX ICD Kaynakları:** Servis, komut ve veri tiplerinin PDF şartnameleri.
-  - **Ağ Mimarisi & Bilgi Tabanı:** Zero-latency optimizasyonları ve topoloji kuralları.
-  - **ROS 2 Topic Standartları:** Otonom sürüş ve sensör topic sözleşmeleri.
-
----
-
-## 🚗 Araç İçi Düğümler (Firmware Apps)
-
-| Düğüm Klasörü | Düğüm Kimliği | Sorumlu Olduğu Görev |
-| :--- | :--- | :--- |
-| **`apps/main_node`** | `0x03` (`MAIN_STM32`) | Araç Ana Ağ Geçidi, IMU Sensörü, LoRa Yer İstasyonu İletişimi, Ethernet ROS 2 Köprüsü |
-| **`apps/traction`** | `0x10` (`TRACTION`) | Çekiş / İnvertör Kontrolörü, Hız ve Tork Yönetimi |
-| **`apps/steering`** | `0x11` (`STEERING`) | Steer-by-Wire Direksiyon Açısı ve Mod Yönetimi |
-| **`apps/bms_gateway`** | `0x30` (`BMS_GATEWAY`)| Batarya Yönetim Sistemi (BMS) Hücre Voltaj ve Sıcaklık İletişimi |
-| **`apps/dummy_*`** | Test Düğümleri | Masaüstü simülasyonları ve donanımsız hat test araçları |
+| Depo Adı | Türü | Sorumlu | Açıklama |
+| :--- | :--- | :--- | :--- |
+| [**`deos-core`**](https://github.com/DEUDEOS-Team/deos-core) | Alt Modül (`lib/deos_core`) | **Emir Arkalı** | STM32 üzerinde koşan yönlendirici, abonelik motoru ve arıza tablosu |
+| [**`deos-protocol`**](https://github.com/DEUDEOS-Team/deos-protocol) | Alt Modül (`lib/deos_protocol`) | **Ortak Protokol** | ANSI C99 Universal Frame codec ve Python C-Bindings kütüphanesi |
+| [**`deos-transport-can`**](https://github.com/DEUDEOS-Team/deos-transport-can) | Alt Modül (`lib/deos_transport_can`) | **Donanım / CAN Ekibi** | STM32 FDCAN sürücüsü ve 29-bit CAN ID filtreleme motoru |
+| [**`deos-ground-station`**](https://github.com/DEUDEOS-Team/deos-ground-station) | Yer Kontrol İstasyonu | **Yer İstasyonu Ekibi** | PyQt tabanlı telemetri ve komuta kontrol arayüzü (LoRa RF) |
+| [**`deos-docs`**](https://github.com/DEUDEOS-Team/deos-docs) | Alt Modül (`docs`) | **Dokümantasyon Ekibi** | Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları |
 
 ---
 
