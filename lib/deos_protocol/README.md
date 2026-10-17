@@ -97,45 +97,116 @@ private:
 
 `deos_protocol`, derlenen `libdeos_protocol.so` paylaşımlı kütüphanesini doğrudan `ctypes` üzerinden çağıran resmi bir Python sarmalayıcısına (`lib/deos_protocol/python/deos.py`) sahiptir. Bu sayede Python kodu protokolü sıfırdan yazmaz; doğrudan C kodundaki encode, decode, codec ve registry fonksiyonlarını çalıştırır.
 
-### Python Kodu Örneği
+### Örnek 1: Yer Kontrol İstasyonu (GCS) UDP Dinleyici ve Komut Gönderici
+Gerçek bir yer istasyonu veya telemetri izleme uygulamasında UDP soketi üzerinden araçla haberleşme:
+
 ```python
+import socket
+import threading
+import time
 import sys
+
+# DEOS Python modülünü dahil et
 sys.path.append("/path/to/deos_firmware/lib/deos_protocol/python")
 import deos
 
-# 1. C Codec ile Veri Paketleme (Little-Endian int16_t)
-speed_bytes = deos.put_i16_le(1500)  # 1500 RPM
-
-# 2. C deos_frame_encode ile Universal Frame Paketleme
-msg = deos.DeosMessage(
-    destination=deos.NODE_TRACTION,
-    source=deos.NODE_GROUND_CONTROL,
-    priority=deos.PRIO_CONTROL,
-    message_class=deos.CLASS_COMMAND,
-    service=deos.SERVICE_TRACTION,
-    command=deos.CMD_TRACTION_SET_TARGET_SPEED,
-    sequence=1,
-    payload=speed_bytes
-)
-
-wire_bytes = msg.encode()  # Doğrudan C deos_frame_encode() çalışır!
-# wire_bytes: b'\x10\x02\x02\x11\x01\x01\x01\x01\x02\xdc\x05'
-
-# 3. C deos_frame_decode ile Gelen Veriyi Ayrıştırma
-rx_msg = deos.DeosMessage.decode(wire_bytes)  # Doğrudan C deos_frame_decode() çalışır!
-print(f"Hedef: {rx_msg.destination_name}, Komut: {rx_msg.command_name}")
-
-# 4. C deos_registry_t ile Callback Kaydı ve Tetikleme
+# 1. C Handler Registry'yi başlat
 registry = deos.DeosRegistry()
 
-def on_speed_command(m: deos.DeosMessage):
-    target_rpm = deos.get_i16_le(m.payload)
-    print(f"Python Callback C'den Tetiklendi: {target_rpm} RPM")
+# 2. Telemetri ve durum dinleyicilerini (callback) tanımla
+def on_traction_telemetry(msg: deos.DeosMessage):
+    # C codec fonksiyonları ile int16 Little-Endian veriyi çöz:
+    target_speed = deos.get_i16_le(msg.payload[0:2])
+    actual_speed = deos.get_i16_le(msg.payload[2:4])
+    print(f"[{msg.source_name}] Hedef: {target_speed} RPM | Anlık: {actual_speed} RPM")
 
-registry.register(deos.CLASS_COMMAND, deos.SERVICE_TRACTION,
-                  deos.CMD_TRACTION_SET_TARGET_SPEED, on_speed_command)
+def on_pong_response(msg: deos.DeosMessage):
+    ping_id = deos.get_u32_le(msg.payload)
+    print(f"[{msg.source_name}] PONG alındı! Ping ID: {ping_id}")
 
-registry.dispatch(rx_msg)  # Doğrudan C deos_registry_dispatch() çalışır!
+# Callback fonksiyonlarını C dispatcher motoruna kaydet:
+registry.register(deos.CLASS_STATUS, deos.SERVICE_TRACTION,
+                  deos.CMD_TRACTION_GET_STATUS, on_traction_telemetry)
+registry.register(deos.CLASS_NETWORK, deos.SERVICE_SYSTEM,
+                  deos.CMD_SYSTEM_PONG, on_pong_response)
+
+# 3. UDP Soketi Aç
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind(("0.0.0.0", 5000))
+VEHICLE_ADDR = ("192.168.1.100", 5000)
+
+# 4. Arka Planda Gelen Paketleri Dinleyen Rx Thread'i
+def rx_loop():
+    while True:
+        data, addr = sock.recvfrom(1024)
+        # Doğrudan C deos_frame_decode() fonksiyonunu çalıştırır:
+        msg = deos.DeosMessage.decode(data)
+        if msg:
+            # Doğrudan C deos_registry_dispatch() fonksiyonunu çalıştırır:
+            registry.dispatch(msg)
+
+threading.Thread(target=rx_loop, daemon=True).start()
+
+# 5. Araçtaki Çekiş (Traction) Düğümüne Hız Komutu Gönder (Tx)
+def send_speed_command(target_rpm: int):
+    # C codec fonksiyonu ile int16Little-Endian paketle:
+    speed_payload = deos.put_i16_le(target_rpm)
+    
+    cmd = deos.DeosMessage(
+        destination=deos.NODE_TRACTION,
+        source=deos.NODE_GROUND_CONTROL,
+        priority=deos.PRIO_CONTROL,
+        message_class=deos.CLASS_COMMAND,
+        service=deos.SERVICE_TRACTION,
+        command=deos.CMD_TRACTION_SET_TARGET_SPEED,
+        sequence=1,
+        payload=speed_payload
+    )
+    # Doğrudan C deos_frame_encode() fonksiyonunu çalıştırır:
+    wire_bytes = cmd.encode()
+    sock.sendto(wire_bytes, VEHICLE_ADDR)
+    print(f"[{cmd.destination_name}] Hız Komutu Gönderildi: {target_rpm} RPM")
+
+# Test komutu gönder
+send_speed_command(1500)
+```
+
+---
+
+### Örnek 2: ROS 2 Python (rclpy) Köprü Düğümü
+DEOS paketlerini ROS 2 `sensor_msgs` veya standart topic'lere dönüştürmek için:
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Int16
+import deos
+
+class DeosRos2BridgeNode(Node):
+    def __init__(self):
+        super().__init__('deos_ros2_bridge')
+        self.publisher_ = self.create_publisher(Int16, 'vehicle/actual_speed', 10)
+        
+        # C Registry mekanizmasını başlat
+        self.registry = deos.DeosRegistry()
+        self.registry.register(
+            deos.CLASS_STATUS,
+            deos.SERVICE_TRACTION,
+            deos.CMD_TRACTION_GET_STATUS,
+            self.on_traction_status
+        )
+
+    def on_traction_status(self, msg: deos.DeosMessage):
+        # C deos_get_i16_le() ile veriyi al ve ROS topic'ine yayınla
+        speed = deos.get_i16_le(msg.payload[2:4])
+        ros_msg = Int16(data=speed)
+        self.publisher_.publish(ros_msg)
+
+    def on_network_packet_received(self, raw_bytes: bytes):
+        # Gelen ham baytları C kütüphanesiyle çöz ve otomatik dispatch et
+        msg = deos.DeosMessage.decode(raw_bytes)  # C deos_frame_decode()
+        if msg:
+            self.registry.dispatch(msg)           # C deos_registry_dispatch()
 ```
 
 ---

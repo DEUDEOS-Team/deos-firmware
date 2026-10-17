@@ -4,3 +4,6 @@ build/
 *~
 build_test/
 *.bak
+__pycache__/
+*.pyc
+tests/desktop/build/
