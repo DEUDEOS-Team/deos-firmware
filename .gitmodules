@@ -5,3 +5,9 @@
 	path = lib/deos_core
 	url = https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git
 	branch = feature/protocol-decoupling
+[submodule "lib/deos_protocol"]
+	path = lib/deos_protocol
+	url = https://github.com/DEUDEOS-Team/deos-protocol.git
+[submodule "lib/deos_transport_can"]
+	path = lib/deos_transport_can
+	url = https://github.com/DEUDEOS-Team/deos-transport-can.git
