@@ -1,0 +1,178 @@
+{
+  "system": "DEOS Autonomous Vehicle Ecosystem",
+  "version": "1.0.0",
+  "description": "DEOS yazılım mimarisi, alt modül sorumlulukları ve donanım düğümleri haritası",
+  "components": [
+    {
+      "id": "FW",
+      "title": "deos-firmware",
+      "role_type": "Ana Depo",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": null,
+      "role": "Zephyr RTOS uygulamaları, alt modül manifestosu ve araç ana gömülü kontrol yazılımı."
+    },
+    {
+      "id": "CORE",
+      "title": "deos-core",
+      "role_type": "Submodule (lib/deos_core)",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-core",
+      "path": null,
+      "role": "Split-Horizon yönlendirici motoru, telemetri abonelikleri ve mandallanan arıza tablosu."
+    },
+    {
+      "id": "PROTO",
+      "title": "deos-protocol",
+      "role_type": "Submodule (lib/deos_protocol)",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-protocol",
+      "path": null,
+      "role": "ANSI C99 Universal Frame (9-bayt), taşınabilir codec ve Python C-Bindings kütüphanesi."
+    },
+    {
+      "id": "CAN",
+      "title": "deos-transport-can",
+      "role_type": "Submodule (lib/deos_transport_can)",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-transport-can",
+      "path": null,
+      "role": "STM32 FDCAN çevre birimi sürücüsü ve 29-bit CAN ID filtreleme motoru."
+    },
+    {
+      "id": "DOCS",
+      "title": "deos-docs",
+      "role_type": "Submodule (docs)",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-docs",
+      "path": null,
+      "role": "Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları."
+    },
+    {
+      "id": "GCS",
+      "title": "deos-ground-station",
+      "role_type": "Yer Kontrol İstasyonu",
+      "owner": "Alper Bora",
+      "repo": "DEUDEOS-Team/deos-ground-station",
+      "path": null,
+      "role": "PyQt tabanlı telemetri izleme ve araç komuta kontrol masaüstü yazılımı."
+    },
+    {
+      "id": "ROS",
+      "title": "deos-ros2-bridge",
+      "role_type": "Otonomi Köprüsü",
+      "owner": "Sepehr Jafarzadeh",
+      "repo": "DEUDEOS-Team/deos-ros2-bridge",
+      "path": null,
+      "role": "Raspberry Pi üzerinde koşan ROS 2 Humble ile araç içi CAN köprüsü."
+    },
+    {
+      "id": "BRIDGE",
+      "title": "deos-ros2-bridge (Donanım)",
+      "role_type": "Otonomi Köprüsü",
+      "owner": "Sepehr Jafarzadeh",
+      "repo": "DEUDEOS-Team/deos-ros2-bridge",
+      "path": null,
+      "role": "Raspberry Pi üzerinde koşan ROS 2 Humble ile Main STM32 Router arasındaki Ethernet köprüsü."
+    },
+    {
+      "id": "PORTAL",
+      "title": "deos-software-development-page",
+      "role_type": "Web Portalı",
+      "owner": "DEUDEOS Ekibi",
+      "repo": "DEUDEOS-Team/deos-software-development-page",
+      "path": null,
+      "role": "Canlı mimari şeması, alt modül haritası ve commit takip web sitesi."
+    },
+    {
+      "id": "RPI",
+      "title": "Raspberry Pi (ROS 2)",
+      "role_type": "Otonomi Bilgisayarı",
+      "owner": "Arda Efe Yılmaz",
+      "repo": null,
+      "path": null,
+      "role": "Otonom sürüş algoritmaları, sensör füzyonu ve ROS 2 paketleri."
+    },
+    {
+      "id": "MAIN",
+      "title": "Main STM32 (apps/main_node)",
+      "role_type": "CAN Düğümü (0x03)",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/main_node",
+      "role": "Araç içi merkezi ağ geçidi ve yönlendirici (Nucleo-H563ZI)."
+    },
+    {
+      "id": "LORA",
+      "title": "LoRa Modülü (Ebyte E220)",
+      "role_type": "LoRa Sürücüsü",
+      "owner": "Alper Bora",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/main_node/src/transport/uart_lora.cpp",
+      "role": "Ebyte E220 UART LoRa modülü sürücüsü ve paket yönlendirme."
+    },
+    {
+      "id": "CAN_BUS",
+      "title": "CAN-FD Backbone",
+      "role_type": "CAN Omurgası",
+      "owner": "Emir Arkalı",
+      "repo": "DEUDEOS-Team/deos-transport-can",
+      "path": null,
+      "role": "Araç içi 5 Mbps yüksek hızlı diferansiyel CAN-FD veri yolu omurgası."
+    },
+    {
+      "id": "TRACTION",
+      "title": "Traction (apps/traction)",
+      "role_type": "CAN Düğümü (0x10)",
+      "owner": "Alper Altındaş",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/traction",
+      "role": "Çekiş / İnvertör kontrolü, tork ve hız talepleri (CAN ID: 0x10)."
+    },
+    {
+      "id": "BRAKE",
+      "title": "Brake (apps/brake)",
+      "role_type": "CAN Düğümü (0x12)",
+      "owner": "Alper Altındaş",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/brake",
+      "role": "Fren aktüatörü kontrolü, hidrolik basınç ve güvenlik mandalı."
+    },
+    {
+      "id": "STEERING",
+      "title": "Steering (apps/steering)",
+      "role_type": "CAN Düğümü (0x11)",
+      "owner": "Alper Altındaş",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/steering",
+      "role": "Steer-by-Wire direksiyon açı kontrolü ve enkoder takibi (CAN ID: 0x11)."
+    },
+    {
+      "id": "BMS_GW",
+      "title": "BMS Gateway (apps/bms_gateway)",
+      "role_type": "CAN Düğümü (0x30)",
+      "owner": "Ayşe Ceren Akdamar",
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/bms_gateway",
+      "role": "Batarya yönetim sistemi ağ geçidi, hücre voltaj ve sıcaklık takibi (CAN ID: 0x30)."
+    },
+    {
+      "id": "BT",
+      "title": "Bluetooth Modülü",
+      "role_type": "Donanım (UART)",
+      "owner": "Atanmadı",
+      "repo": null,
+      "path": null,
+      "role": "Gamepad kablosuz sürüş kontrolü için Bluetooth modülü (Henüz deposu yok)."
+    },
+    {
+      "id": "GAMEPAD",
+      "title": "Gamepad",
+      "role_type": "Harici Donanım",
+      "owner": "Operatör",
+      "repo": null,
+      "path": null,
+      "role": "Bluetooth üzerinden araç sürüş komutları ileten kablosuz gamepad kumandası."
+    }
+  ]
+}
