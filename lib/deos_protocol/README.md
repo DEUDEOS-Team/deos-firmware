@@ -87,20 +87,95 @@ private:
         return 0;
     }
 
-    deos_dispatcher_t m_dispatcher;
+    deos_registry_t m_registry;
 };
 ```
 
 ---
 
-## 3. Doğrulama ve Masaüstü Testleri
+## 3. Python ile Kullanım (Yer Kontrol İstasyonu / Scripting)
 
-Masaüstünde Zephyr olmadan saf C/C++ olarak test etmek için:
+`deos_protocol` çerçeve formatı, Python tarafında ek bir harici kütüphane gerektirmeden standart `struct` modülü ile doğrudan kullanılabilir.
 
+### Saf Python Örneği (0 Bağımlılık)
+```python
+import struct
+from dataclasses import dataclass
+from typing import Optional
+
+DEOS_UNIVERSAL_HEADER_SIZE = 9
+DEOS_PROTOCOL_VERSION = 0x11
+
+@dataclass
+class DeosMessage:
+    destination: int = 0
+    source: int = 0
+    priority: int = 4
+    version: int = DEOS_PROTOCOL_VERSION
+    message_class: int = 0
+    service: int = 0
+    command: int = 0
+    sequence: int = 0
+    payload: bytes = b""
+
+    def encode(self) -> bytes:
+        """9-baytlık Evrensel Çerçeve başlığı ve payload'ı paketler."""
+        header = struct.pack(
+            "<BBBBBBBBB",
+            self.destination, self.source, self.priority, self.version,
+            self.message_class, self.service, self.command, self.sequence,
+            len(self.payload)
+        )
+        return header + self.payload
+
+    @classmethod
+    def decode(cls, data: bytes) -> Optional["DeosMessage"]:
+        """Ham bayt dizisinden mesajı çözer."""
+        if len(data) < DEOS_UNIVERSAL_HEADER_SIZE:
+            return None
+        dest, src, prio, ver, m_class, svc, cmd, seq, plen = struct.unpack(
+            "<BBBBBBBBB", data[:DEOS_UNIVERSAL_HEADER_SIZE]
+        )
+        if len(data) < DEOS_UNIVERSAL_HEADER_SIZE + plen:
+            return None
+        return cls(dest, src, prio, ver, m_class, svc, cmd, seq, data[9:9+plen])
+
+# Örnek: Yer İstasyonundan Araç Çekiş Düğümüne Hedef Hız Komutu Gönderme
+target_speed = 1500  # RPM (int16_t)
+payload = struct.pack("<h", target_speed)
+
+msg = DeosMessage(
+    destination=0x10,           # DEOS_NODE_TRACTION
+    source=0x02,                # DEOS_NODE_GROUND_CONTROL
+    priority=2,                 # DEOS_PRIO_CONTROL
+    message_class=0x01,         # DEOS_CLASS_COMMAND
+    service=0x01,               # DEOS_SERVICE_TRACTION
+    command=0x01,               # DEOS_CMD_TRACTION_SET_TARGET_SPEED
+    sequence=1,
+    payload=payload
+)
+
+wire_bytes = msg.encode()
+# wire_bytes doğrudan UDP soketine, LoRa framing'e veya CAN arayüzüne gönderilebilir!
+```
+
+> [!TIP]
+> İstenirse `libdeos_protocol` paylaşımlı kütüphane (`.so`) olarak derlenip Python `ctypes` üzerinden de doğrudan C fonksiyonları çağrılabilir.
+
+---
+
+## 4. Doğrulama ve Masaüstü Testleri
+
+### C++ Masaüstü Testi
 ```bash
 mkdir -p tests/desktop/build
 cd tests/desktop/build
 cmake ..
 make
 ./desktop_protocol_test
+```
+
+### Python Masaüstü Testi
+```bash
+python3 tests/desktop/test_deos_protocol.py
 ```
