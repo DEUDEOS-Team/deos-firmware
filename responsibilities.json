@@ -264,8 +264,8 @@
       "hw_subtitle": null,
       "role_type": "Batarya Modülü",
       "owner": "Ayşe Ceren Akdamar",
-      "repo": null,
-      "path": null,
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/bms_gateway",
       "role": "1. Batarya paketi hücre voltaj ve sıcaklık izleme ünitesi.",
       "status_note": "Donanım testleri sürüyor."
     },
@@ -278,8 +278,8 @@
       "hw_subtitle": null,
       "role_type": "Batarya Modülü",
       "owner": "Ayşe Ceren Akdamar",
-      "repo": null,
-      "path": null,
+      "repo": "DEUDEOS-Team/deos-firmware",
+      "path": "apps/bms_gateway",
       "role": "2. Batarya paketi hücre voltaj ve sıcaklık izleme ünitesi.",
       "status_note": "Donanım testleri sürüyor."
     },
