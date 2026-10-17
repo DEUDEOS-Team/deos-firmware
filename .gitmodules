@@ -3,7 +3,7 @@
 	url = https://github.com/DEUDEOS-Team/deos-docs.git
 [submodule "lib/deos_core"]
 	path = lib/deos_core
-	url = https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git
+	url = https://github.com/DEUDEOS-Team/deos-core.git
 	branch = feature/protocol-decoupling
 [submodule "lib/deos_protocol"]
 	path = lib/deos_protocol
