@@ -16,7 +16,6 @@ DEOS ekosistemi; modüler Git alt modülleri ve ekip sorumluluk dağılımına s
 graph TD
     classDef root fill:#1f6feb,stroke:#388bfd,stroke-width:2px,color:#ffffff;
     classDef sub fill:#238636,stroke:#2ea043,stroke-width:1.5px,color:#ffffff;
-    classDef dev fill:#8957e5,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
     classDef ext fill:#d29922,stroke:#bb8009,stroke-width:1.5px,color:#ffffff;
 
     FW["deos-firmware<br/>(Ana Sistem / Zephyr RTOS)"]:::root
@@ -26,16 +25,8 @@ graph TD
     FW -->|"Submodule (lib/deos_transport_can)"| CAN["deos-transport-can<br/>(STM32 CAN-FD Sürücüsü)"]:::sub
     FW -->|"Submodule (docs)"| DOCS["deos-docs<br/>(Merkezi ICD & Şartnameler)"]:::sub
 
-    PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(Jetson / Otonomi)"]:::ext
+    PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(Raspberry Pi Köprüsü)"]:::ext
     PROTO -.->|"Python Bindings"| GCS["deos-ground-station<br/>(Yer Kontrol İstasyonu)"]:::ext
-
-    DEV_EMIR["Emir Arkalı<br/>(Core Mimarisi & Router)"]:::dev
-    DEV_CAN["Donanım / CAN Ekibi<br/>(FDCAN Sürücüsü)"]:::dev
-    DEV_GCS["Yer İstasyonu Ekibi<br/>(Telemetri GUI)"]:::dev
-
-    CORE --- DEV_EMIR
-    CAN --- DEV_CAN
-    GCS --- DEV_GCS
 ```
 
 ---
@@ -53,13 +44,13 @@ graph TD
     classDef bms fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#c9d1d9;
     classDef bus fill:#0969da,stroke:#54aeff,stroke-width:4px,color:#ffffff;
 
-    RPI["Raspberry Pi / Jetson<br/>(Otonom Sürüş / ROS 2)"]:::host
+    RPI["Raspberry Pi<br/>(Otonom Sürüş / ROS 2)"]:::host
     MAIN["Main STM32<br/>(Router)"]:::mcu
 
     JOY["Manuel Kumanda<br/>(Gamepad)"]:::host
-    BT["Bluetooth Modülü<br/>(HC-05 / BLE)"]:::rf
+    BT["Bluetooth Modülü"]:::rf
 
-    LORA["LoRa Modülü<br/>(SX1262)"]:::rf
+    LORA["LoRa Modülü<br/>(Ebyte E220)"]:::rf
     GCS["Ground Control<br/>(deos-ground-station)"]:::host
 
     RPI <-->|"Ethernet"| MAIN
@@ -87,16 +78,20 @@ graph TD
 
 ---
 
-## 📦 Ekosistem Depoları ve Git Alt Modülleri
+## 📦 Ekosistem Depoları ve Sorumluluk Tablosu
 
-DEOS projesi "Monorepo" karmaşasını önlemek amacıyla bağımsız depolara ayrılmıştır:
+DEOS projesi modüler bir mimaride yönetilmektedir:
 
-| Depo Adı | Türü | Sorumlu | Açıklama |
+| Depo / Bileşen | Konum / Rol | Sorumlu | Açıklama |
 | :--- | :--- | :--- | :--- |
-| [**`deos-core`**](https://github.com/DEUDEOS-Team/deos-core) | Alt Modül (`lib/deos_core`) | **Emir Arkalı** | STM32 üzerinde koşan yönlendirici, abonelik motoru ve arıza tablosu |
-| [**`deos-protocol`**](https://github.com/DEUDEOS-Team/deos-protocol) | Alt Modül (`lib/deos_protocol`) | **Ortak Protokol** | ANSI C99 Universal Frame codec ve Python C-Bindings kütüphanesi |
+| [**`deos-firmware`**](https://github.com/DEUDEOS-Team/deos-firmware) | Ana Depo | **Emir Arkalı** | Zephyr RTOS uygulamaları ve alt modül manifestosu |
+| [**`deos-core`**](https://github.com/DEUDEOS-Team/deos-core) | Alt Modül (`lib/deos_core`) | **Emir Arkalı** | Split-Horizon yönlendirici motoru, telemetri abonelikleri ve arıza tablosu |
+| [**`deos-protocol`**](https://github.com/DEUDEOS-Team/deos-protocol) | Alt Modül (`lib/deos_protocol`) | **Ortak Protokol / Emir Arkalı** | ANSI C99 Universal Frame codec ve Python C-Bindings kütüphanesi |
 | [**`deos-transport-can`**](https://github.com/DEUDEOS-Team/deos-transport-can) | Alt Modül (`lib/deos_transport_can`) | **Donanım / CAN Ekibi** | STM32 FDCAN sürücüsü ve 29-bit CAN ID filtreleme motoru |
-| [**`deos-ground-station`**](https://github.com/DEUDEOS-Team/deos-ground-station) | Yer Kontrol İstasyonu | **Yer İstasyonu Ekibi** | PyQt tabanlı telemetri ve komuta kontrol arayüzü (LoRa RF) |
+| [**`deos-ground-station`**](https://github.com/DEUDEOS-Team/deos-ground-station) | Yer Kontrol İstasyonu | **Alper Bora** | PyQt tabanlı telemetri ve komuta kontrol masaüstü yazılımı |
+| [**`deos-ros2-bridge`**](https://github.com/DEUDEOS-Team/deos-ros2-bridge) | Otonomi Köprüsü | **Sepehr Jafarzadeh** | Raspberry Pi üzerinde koşan ROS 2 Humble ile araç içi CAN köprüsü |
+| **`BMS Gateway & BMS 1-2`** | `apps/bms_gateway` | **Ayşe Ceren Akdamar** | Batarya yönetim sistemi, hücre voltaj ve sıcaklık takibi |
+| **`Traction, Brake, Steering`** | `apps/traction`, `apps/steering` | **Alper Altındaş** | Çekiş / İnvertör kontrolü, frenleme ve Steer-by-Wire direksiyon |
 | [**`deos-docs`**](https://github.com/DEUDEOS-Team/deos-docs) | Alt Modül (`docs`) | **Dokümantasyon Ekibi** | Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları |
 
 ---
