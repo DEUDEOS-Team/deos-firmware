@@ -6,6 +6,50 @@ Proje, donanım bağımsız (hardware-agnostic) bir yapıda geliştirilmiş olup
 
 ---
 
+## 🏛️ Dağıtık Sistem Mimarisi ve Ekosistem Ağacı
+
+DEOS ekosistemi; gömülü mikrodenetleyiciler (STM32), otonomi bilgisayarı (ROS 2), yer kontrol istasyonu ve dokümantasyon birimlerinin bağımsız yönetildiği modüler bir alt modül (Git Submodule) mimarisine sahiptir:
+
+```mermaid
+graph TD
+    classDef main fill:#1f6feb,stroke:#388bfd,stroke-width:2px,color:#fff;
+    classDef sub fill:#238636,stroke:#2ea043,stroke-width:2px,color:#fff;
+    classDef dev fill:#8957e5,stroke:#a371f7,stroke-width:2px,color:#fff;
+    classDef ext fill:#d29922,stroke:#bb8009,stroke-width:2px,color:#fff;
+
+    FW["🏎️ deos-firmware (Ana Sistem / MCU)<br/><i>Zephyr RTOS Uygulamaları</i>"]:::main
+
+    %% Submodules
+    FW -->|"Submodule (lib/deos_core)"| CORE["🧠 deos-core<br/>(Router, Subscription, Fault Motoru)"]:::sub
+    FW -->|"Submodule (lib/deos_protocol)"| PROTO["📦 deos-protocol<br/>(Universal Frame, Codec, ICD)"]:::sub
+    FW -->|"Submodule (lib/deos_transport_can)"| CAN["🔌 deos-transport-can<br/>(STM32 CAN-FD Sürücüsü)"]:::sub
+    FW -->|"Submodule (docs)"| DOCS["📑 deos-docs<br/>(LaTeX ICD & Mimari Şartnameler)"]:::sub
+
+    %% Harici Bağlı Sistemler
+    PROTO -.->|"Saf C/C++ Bağı"| ROS["🤖 deos-ros2-bridge<br/>(Jetson / Otonom Sürüş)"]:::ext
+    PROTO -.->|"Python C-Bindings"| GCS["💻 deos-ground-control<br/>(Yer Kontrol İstasyonu)"]:::ext
+
+    %% Ekip Sorumluluk Dağılımı
+    CORE --- DEV_EMIR["👤 Emir Arkalı<br/><i>(Core Mimarisi & Router)</i>"]:::dev
+    CAN --- DEV_CAN["👤 Donanım / CAN Ekibi<br/><i>(FDCAN Sürücüsü)</i>"]:::dev
+    ROS --- DEV_ROS["👤 ROS 2 Ekibi<br/><i>(Köprü & Sensör Verileri)</i>"]:::dev
+    GCS --- DEV_GCS["👤 Yer İstasyonu Ekibi<br/><i>(Telemetri GUI)</i>"]:::dev
+```
+
+### 📦 Ekosistem Depo ve Modül Dağılımı
+
+| Depo Adı | Tür | Sorumluluk Alanı | İlgili Ekip / Rol |
+| :--- | :--- | :--- | :--- |
+| **[`deos-firmware`](https://github.com/DEUDEOS-Team/deos-firmware)** | Ana Depo | STM32 Firmware Uygulamaları (`main_node`, `traction`, `steering`) | Tüm Gömülü Ekip |
+| **[`deos-core`](https://github.com/DEUDEOS-Team/deos-core)** | Submodule | Zephyr RTOS Düğüm Motoru, Router, Telemetri Abonelikleri ve Hata Tablosu | Emir Arkalı |
+| **[`deos-protocol`](https://github.com/DEUDEOS-Team/deos-protocol)** | Submodule | Ortamdan Bağımsız 9-Bayt Universal Frame, Serileştirme (Codec) ve ICD | Protokol & Ortak Ekip |
+| **[`deos-transport-can`](https://github.com/DEUDEOS-Team/deos-transport-can)** | Submodule | STM32 FDCAN Donanım Sürücüsü ve 29-bit CAN ID Kodlayıcısı | Gömülü Donanım Ekibi |
+| **[`deos-docs`](https://github.com/DEUDEOS-Team/deos-docs)** | Submodule | Resmi LaTeX ICD Şartnameleri ve Sistem Tasarım Raporları | Sistem & Dokümantasyon Ekibi |
+| **[`deos-ros2-bridge`](https://github.com/DEUDEOS-Team/deos-ros2-bridge)** | Dış Sistem | Araç ile Jetson/ROS 2 Arasındaki Topic Köprüsü | ROS 2 / Otonomi Ekibi |
+| **[`deos-ground-control`](https://github.com/DEUDEOS-Team/deos-ground-control)** | Dış Sistem | Telemetri İzleme ve Uzaktan Kontrol GUI / Test Betikleri | Yer İstasyonu Ekibi |
+
+---
+
 ## 🚀 Kurulum ve İlk Adımlar
 
 DEOS Firmware, kendi içerisinde bir Zephyr manifestosu (`west.yml`) barındırır. Bu sayede gerekli olan Zephyr çekirdeği ve dış modüller otomatik olarak indirilir.
