@@ -83,7 +83,7 @@ graph TD
 
 ## Ekosistem Depoları ve Sorumluluk Tablosu
 
-DEOS projesi modüler bir mimaride yönetilmektedir. Tüm depoların ve uygulamaların anlık canlı commit geçmişini [**DEOS Mimari Portalı**](https://deudeos-team.github.io/deos-firmware/)'ndan takip edebilirsiniz:
+DEOS projesi modüler bir mimaride yönetilmektedir. Tüm depoların ve uygulamaların anlık canlı commit geçmişini [**DEOS Mimari Portalı**](https://deudeos-team.github.io/deos-software-development-page/)'ndan takip edebilirsiniz:
 
 | Depo / Bileşen / Klasör | Konum / Rol | Sorumlu | Açıklama |
 | :--- | :--- | :--- | :--- |
@@ -93,6 +93,7 @@ DEOS projesi modüler bir mimaride yönetilmektedir. Tüm depoların ve uygulama
 | [**`deos-transport-can`**](https://github.com/DEUDEOS-Team/deos-transport-can) | Alt Modül (`lib/deos_transport_can`) | **Emir Arkalı** | STM32 FDCAN sürücüsü ve 29-bit CAN ID filtreleme motoru |
 | [**`deos-ground-station`**](https://github.com/DEUDEOS-Team/deos-ground-station) | Yer Kontrol İstasyonu | **Alper Bora** | PyQt tabanlı telemetri ve komuta kontrol masaüstü yazılımı |
 | [**`deos-ros2-bridge`**](https://github.com/DEUDEOS-Team/deos-ros2-bridge) | Otonomi Köprüsü | **Sepehr Jafarzadeh** | Raspberry Pi üzerinde koşan ROS 2 Humble ile araç içi CAN köprüsü |
+| [**`deos-software-development-page`**](https://github.com/DEUDEOS-Team/deos-software-development-page) | Web Portalı | **DEUDEOS Ekibi** | Canlı sistem mimarisi, donanım topolojisi ve commit takip sitesi |
 | **`Raspberry Pi (ROS 2)`** | Otonomi Bilgisayarı | **Arda Efe Yılmaz** | Otonom sürüş algoritmaları, sensör füzyonu ve ROS 2 paketleri |
 | **`apps/traction`** | CAN Düğümü (0x10) | **Alper Altındaş** | Çekiş / İnvertör kontrolü, tork ve hız talepleri |
 | **`apps/brake`** | CAN Düğümü (0x12) | **Alper Altındaş** | Fren aktüatörü kontrolü, hidrolik basınç ve güvenlik |
