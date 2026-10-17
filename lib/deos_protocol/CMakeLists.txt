@@ -4,7 +4,7 @@ project(deos_protocol C)
 set(DEOS_PROTOCOL_SOURCES
     src/deos_frame.c
     src/deos_codec.c
-    src/deos_dispatcher.c
+    src/deos_registry.c
 )
 
 if(DEFINED ZEPHYR_BASE)

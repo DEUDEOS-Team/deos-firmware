@@ -14,10 +14,10 @@ Herhangi bir RTOS (Zephyr, FreeRTOS), dinamik bellek ayırıcı (`malloc`) veya 
 | `include/deos/deos_types.h` | Çekirdek mesaj konteyneri (`deos_message_t`), konfigürasyon ve tüm ICD servis veri yükü (payload) yapıları. |
 | `include/deos/deos_icd.h` | ICD Düğüm (Node), Servis (Service), Komut (Command), Öncelik (Priority) ve Hata (Fault) ID kayıtları. |
 | `include/deos/deos_codec.h` | Taşınabilir Little-Endian serileştirme ve deserileştirme yardımcıları (`deos_put_u16_le`, `deos_get_u16_le` vb.). |
-| `include/deos/deos_dispatcher.h` | Reentrant, sıfır maliyetli ve deterministik mesaj dağıtıcı ve callback kayıt altyapısı (`deos_dispatcher_t`). |
+| `include/deos/deos_registry.h` | Reentrant, sıfır maliyetli ve deterministik mesaj işleyici kayıt tablosu (`deos_registry_t`). |
 | `src/deos_frame.c` | CRC16-CCITT ve çerçeve doğrulama/kodlama mantığı. |
 | `src/deos_codec.c` | Donanım ve mimariden bağımsız bit kaydırmalı bayt paketleme implementasyonu. |
-| `src/deos_dispatcher.c` | Dinamik bellek kullanmayan, hızlı callback arama ve çalıştırma motoru. |
+| `src/deos_registry.c` | Dinamik bellek kullanmayan, hızlı callback arama ve çalıştırma motoru. |
 
 ---
 
@@ -51,20 +51,20 @@ ament_package()
 #include <deos/deos_frame.h>
 #include <deos/deos_types.h>
 #include <deos/deos_icd.h>
-#include <deos/deos_dispatcher.h>
+#include <deos/deos_registry.h>
 
 class RosBridgeNode : public rclcpp::Node {
 public:
     RosBridgeNode() : Node("deos_ros_bridge") {
-        // Dispatcher'ı başlat
-        deos_dispatcher_init(&m_dispatcher);
+        // Handler Registry'yi başlat
+        deos_registry_init(&m_registry);
 
         // İlgilendiğimiz telemetrileri ve komutları callback olarak kaydet
-        deos_dispatcher_register(&m_dispatcher,
-                                 DEOS_CLASS_STATUS,
-                                 DEOS_SERVICE_TRACTION,
-                                 DEOS_CMD_TRACTION_GET_STATUS,
-                                 &RosBridgeNode::on_traction_status, this);
+        deos_registry_register(&m_registry,
+                               DEOS_CLASS_STATUS,
+                               DEOS_SERVICE_TRACTION,
+                               DEOS_CMD_TRACTION_GET_STATUS,
+                               &RosBridgeNode::on_traction_status, this);
     }
 
     // UDP / Serial hattından ham baytlar geldiğinde:
@@ -72,7 +72,7 @@ public:
         deos_message_t msg;
         if (deos_frame_decode(buf, len, &msg) == 0) {
             // Kayıtlı callback'leri otomatik tetikler
-            deos_dispatcher_dispatch(&m_dispatcher, &msg);
+            deos_registry_dispatch(&m_registry, &msg);
         }
     }
 

@@ -9,10 +9,10 @@ LOG_MODULE_REGISTER(deos_dispatch, LOG_LEVEL_INF);
 
 
 
-#include <deos/deos_dispatcher.h>
+#include <deos/deos_registry.h>
 
-/** @brief Sistem genelinde kullanilan ana cekirdek dispatcher ornegi */
-static deos_dispatcher_t core_dispatcher;
+/** @brief Sistem genelinde kullanilan ana cekirdek callback kayit tablosu (registry) */
+static deos_registry_t core_registry;
 
 /**
  * @brief Dispatcher (mesaj dagitim) tablosunu baslatir ve sifirlar.
@@ -23,8 +23,8 @@ static deos_dispatcher_t core_dispatcher;
  */
 int deos_dispatch_init(void)
 {
-    deos_dispatcher_init(&core_dispatcher);
-    LOG_DBG("Dispatcher initialized");
+    deos_registry_init(&core_registry);
+    LOG_DBG("Dispatcher registry initialized");
     return 0;
 }
 
@@ -60,8 +60,8 @@ int deos_register_handler_for_node(
         return -EPERM;
     }
 
-    int ret = deos_dispatcher_register_for_node(
-        &core_dispatcher, local_node, message_class, service, command, handler, user_data);
+    int ret = deos_registry_register_for_node(
+        &core_registry, local_node, message_class, service, command, handler, user_data);
 
     if (ret == 0) {
         LOG_DBG("Registered handler for Node: 0x%02X Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
@@ -120,8 +120,8 @@ deos_message_handler_t deos_dispatch_find_handler(
     uint8_t command,
     void **out_user_data)
 {
-    return deos_dispatcher_find(
-        &core_dispatcher, local_node, message_class, service, command, out_user_data);
+    return deos_registry_find(
+        &core_registry, local_node, message_class, service, command, out_user_data);
 }
 
 /**
@@ -185,10 +185,10 @@ void deos_dispatch_local(const deos_message_t *msg)
         }
     }
 
-    /* Application Handlers */
-    int matched = deos_dispatcher_dispatch(&core_dispatcher, msg);
+    /* Application Handlers via Registry */
+    int matched = deos_registry_dispatch(&core_registry, msg);
     if (matched == 0) {
-        LOG_DBG("No handler for Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
+        LOG_DBG("No handler in registry for Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
                 msg->message_class, msg->service, msg->command);
     }
 }

@@ -5,7 +5,7 @@
 #include <deos/deos_types.h>
 #include <deos/deos_frame.h>
 #include <deos/deos_codec.h>
-#include <deos/deos_dispatcher.h>
+#include <deos/deos_registry.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -16,7 +16,7 @@
 #include <deos/deos_types.h>
 #include <deos/deos_icd.h>
 #include <deos/deos_codec.h>
-#include <deos/deos_dispatcher.h>
+#include <deos/deos_registry.h>
 
 // Mock ROS 2 Node Context to demonstrate C++ user_data integration
 class MockRosBridgeNode {
@@ -123,15 +123,15 @@ int main() {
     std::cout << "PASSED\n";
 
     // -------------------------------------------------------------
-    // Test 3: Standalone Dispatcher and C++ user_data Integration
+    // Test 3: Standalone Handler Registry and C++ user_data Integration
     // -------------------------------------------------------------
-    std::cout << "[TEST 3] Testing Standalone Dispatcher Registry & Dispatch... ";
+    std::cout << "[TEST 3] Testing Standalone Handler Registry & Execution... ";
     MockRosBridgeNode ros_node;
-    deos_dispatcher_t dispatcher;
-    deos_dispatcher_init(&dispatcher);
+    deos_registry_t registry;
+    deos_registry_init(&registry);
 
-    int reg_ret1 = deos_dispatcher_register(
-        &dispatcher,
+    int reg_ret1 = deos_registry_register(
+        &registry,
         DEOS_CLASS_COMMAND,
         DEOS_SERVICE_TRACTION,
         DEOS_CMD_TRACTION_SET_TARGET_SPEED,
@@ -140,8 +140,8 @@ int main() {
     );
     assert(reg_ret1 == 0);
 
-    int reg_ret2 = deos_dispatcher_register(
-        &dispatcher,
+    int reg_ret2 = deos_registry_register(
+        &registry,
         DEOS_CLASS_STATUS,
         DEOS_SERVICE_LIGHTING,
         DEOS_CMD_LIGHTING_STATUS,
@@ -150,10 +150,10 @@ int main() {
     );
     assert(reg_ret2 == 0);
 
-    // Re-decode original valid frame and dispatch it
+    // Re-decode original valid frame and dispatch it via registry
     assert(deos_frame_decode(wire_frame, encoded_len, &rx_msg) == 0);
 
-    int dispatched_count = deos_dispatcher_dispatch(&dispatcher, &rx_msg);
+    int dispatched_count = deos_registry_dispatch(&registry, &rx_msg);
     assert(dispatched_count == 1);
     assert(ros_node.m_rx_speed == 1500);
 
@@ -165,7 +165,7 @@ int main() {
     light_msg.destination = DEOS_NODE_GLOBAL_BROADCAST;
     light_msg.payload_len = 6;
 
-    int light_count = deos_dispatcher_dispatch(&dispatcher, &light_msg);
+    int light_count = deos_registry_dispatch(&registry, &light_msg);
     assert(light_count == 1);
     assert(ros_node.m_lighting_rx_count == 1);
 

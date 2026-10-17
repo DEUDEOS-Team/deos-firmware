@@ -1,14 +1,14 @@
 /**
- * @file deos_dispatcher.h
- * @brief Portable Message Dispatcher and Callback Registry for DEOS Protocol
+ * @file deos_registry.h
+ * @brief Portable Message Handler Registry for DEOS Protocol
  *
  * Provides a reentrant, deterministic, zero-allocation callback table and
- * dispatch mechanism. Usable in both standalone Desktop/ROS 2 C++ nodes and
- * embedded firmware (Zephyr RTOS / bare-metal).
+ * handler execution mechanism. Usable in both standalone Desktop/ROS 2 C++ nodes
+ * and embedded firmware (Zephyr RTOS / bare-metal).
  */
 
-#ifndef DEOS_DISPATCHER_H
-#define DEOS_DISPATCHER_H
+#ifndef DEOS_REGISTRY_H
+#define DEOS_REGISTRY_H
 
 #include <deos/deos_types.h>
 #include <stdbool.h>
@@ -18,42 +18,42 @@
 extern "C" {
 #endif
 
-#ifndef DEOS_MAX_DISPATCHER_HANDLERS
-#define DEOS_MAX_DISPATCHER_HANDLERS 32
+#ifndef DEOS_MAX_REGISTRY_HANDLERS
+#define DEOS_MAX_REGISTRY_HANDLERS 32
 #endif
 
 /**
- * @brief Dispatcher entry representing a single registered command listener.
+ * @brief Registry entry representing a single registered command listener.
  */
 typedef struct {
     bool in_use;                         /**< Indicates if slot contains active callback */
-    deos_node_id_t local_node;           /**< Target logical node ID (or 0xFF for any/wildcard) */
+    deos_node_id_t local_node;           /**< Target logical node ID (or 0xFF for wildcard) */
     deos_message_class_t message_class;  /**< Message class (COMMAND, STATUS, REQUEST, etc.) */
     deos_service_id_t service;           /**< Functional Service ID */
     uint8_t command;                     /**< Command ID */
     deos_message_handler_t handler;      /**< Callback function pointer */
     void *user_data;                     /**< Context pointer (e.g. C++ class instance) */
-} deos_dispatcher_entry_t;
+} deos_registry_entry_t;
 
 /**
- * @brief Reentrant dispatcher instance.
+ * @brief Reentrant handler registry instance.
  */
-typedef struct deos_dispatcher {
-    deos_dispatcher_entry_t entries[DEOS_MAX_DISPATCHER_HANDLERS];
+typedef struct deos_registry {
+    deos_registry_entry_t entries[DEOS_MAX_REGISTRY_HANDLERS];
     size_t count;
-} deos_dispatcher_t;
+} deos_registry_t;
 
 /**
- * @brief Initialize a dispatcher instance (clears all entries).
- * @param disp Pointer to dispatcher instance.
- * @return 0 on success, -EINVAL if disp is NULL.
+ * @brief Initialize a registry instance (clears all entries).
+ * @param reg Pointer to registry instance.
+ * @return 0 on success, -EINVAL if reg is NULL.
  */
-int deos_dispatcher_init(deos_dispatcher_t *disp);
+int deos_registry_init(deos_registry_t *reg);
 
 /**
  * @brief Register a callback for a specific local node ID.
  *
- * @param disp          Dispatcher instance.
+ * @param reg           Registry instance.
  * @param local_node    Logical local node ID to match (e.g. DEOS_NODE_MAIN_STM32).
  * @param message_class Target message class.
  * @param service       Target service ID.
@@ -63,8 +63,8 @@ int deos_dispatcher_init(deos_dispatcher_t *disp);
  *
  * @return 0 on success, -EEXIST if already registered, -ENOSPC if full, -EINVAL on bad args.
  */
-int deos_dispatcher_register_for_node(
-    deos_dispatcher_t *disp,
+int deos_registry_register_for_node(
+    deos_registry_t *reg,
     deos_node_id_t local_node,
     deos_message_class_t message_class,
     deos_service_id_t service,
@@ -75,7 +75,7 @@ int deos_dispatcher_register_for_node(
 /**
  * @brief Register a callback matching any destination node (wildcard 0xFF).
  *
- * @param disp          Dispatcher instance.
+ * @param reg           Registry instance.
  * @param message_class Target message class.
  * @param service       Target service ID.
  * @param command       Target command ID.
@@ -84,8 +84,8 @@ int deos_dispatcher_register_for_node(
  *
  * @return 0 on success, -EEXIST if already registered, -ENOSPC if full, -EINVAL on bad args.
  */
-int deos_dispatcher_register(
-    deos_dispatcher_t *disp,
+int deos_registry_register(
+    deos_registry_t *reg,
     deos_message_class_t message_class,
     deos_service_id_t service,
     uint8_t command,
@@ -95,7 +95,7 @@ int deos_dispatcher_register(
 /**
  * @brief Unregister a previously registered callback.
  *
- * @param disp          Dispatcher instance.
+ * @param reg           Registry instance.
  * @param local_node    Local node ID.
  * @param message_class Message class.
  * @param service       Service ID.
@@ -103,8 +103,8 @@ int deos_dispatcher_register(
  *
  * @return 0 on success, -ENOENT if not found, -EINVAL on bad args.
  */
-int deos_dispatcher_unregister(
-    deos_dispatcher_t *disp,
+int deos_registry_unregister(
+    deos_registry_t *reg,
     deos_node_id_t local_node,
     deos_message_class_t message_class,
     deos_service_id_t service,
@@ -113,7 +113,7 @@ int deos_dispatcher_unregister(
 /**
  * @brief Find registered handler for given parameters.
  *
- * @param disp          Dispatcher instance.
+ * @param reg           Registry instance.
  * @param local_node    Local node ID.
  * @param message_class Message class.
  * @param service       Service ID.
@@ -122,8 +122,8 @@ int deos_dispatcher_unregister(
  *
  * @return Function pointer if found, NULL otherwise.
  */
-deos_message_handler_t deos_dispatcher_find(
-    const deos_dispatcher_t *disp,
+deos_message_handler_t deos_registry_find(
+    const deos_registry_t *reg,
     deos_node_id_t local_node,
     deos_message_class_t message_class,
     deos_service_id_t service,
@@ -131,19 +131,19 @@ deos_message_handler_t deos_dispatcher_find(
     void **out_user_data);
 
 /**
- * @brief Dispatch a decoded DEOS message to matching registered handlers.
+ * @brief Match an incoming message against registered callbacks and execute them.
  *
- * @param disp Dispatcher instance.
- * @param msg  Pointer to incoming message.
+ * @param reg Registry instance.
+ * @param msg Pointer to incoming message.
  *
  * @return Number of handlers executed (>0 if matched), 0 if no handler, negative on error.
  */
-int deos_dispatcher_dispatch(
-    const deos_dispatcher_t *disp,
+int deos_registry_dispatch(
+    const deos_registry_t *reg,
     const deos_message_t *msg);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* DEOS_DISPATCHER_H */
+#endif /* DEOS_REGISTRY_H */
