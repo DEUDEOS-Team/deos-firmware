@@ -18,10 +18,10 @@ graph TD
 
     FW["deos-firmware<br/>(Ana Sistem / Zephyr RTOS)"]:::root
 
-    FW -->|"Submodule"| CORE["deos-core<br/>(Router)"]:::sub
-    FW -->|"Submodule"| PROTO["deos-protocol<br/>(Protokol & Codec)"]:::sub
-    FW -->|"Submodule"| CAN["deos-transport-can<br/>(CAN-FD Sürücüsü)"]:::sub
-    FW -->|"Submodule"| DOCS["deos-docs<br/>(ICD & Belgeler)"]:::sub
+    FW --> CORE["deos-core<br/>(Router)"]:::sub
+    FW --> PROTO["deos-protocol<br/>(Protokol & Codec)"]:::sub
+    FW --> CAN["deos-transport-can<br/>(CAN-FD Sürücüsü)"]:::sub
+    FW --> DOCS["deos-docs<br/>(ICD & Belgeler)"]:::sub
 
     PROTO -.->|"C/C++ Bağı"| ROS["deos-ros2-bridge<br/>(ROS 2 Köprüsü)"]:::ext
     PROTO -.->|"Python Bindings"| GCS["deos-ground-station<br/>(Yer İstasyonu)"]:::ext
@@ -41,24 +41,27 @@ graph TD
     classDef rf fill:#793ed4,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
     classDef can fill:#238636,stroke:#3fb950,stroke-width:1.5px,color:#ffffff;
     classDef bms fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#c9d1d9;
-    classDef bus fill:#0969da,stroke:#54aeff,stroke-width:4px,color:#ffffff;
+    classDef bus fill:#0969da,stroke:#54aeff,stroke-width:3px,color:#ffffff;
 
     RPI["Raspberry Pi<br/>(ROS 2)"]:::host
     BRIDGE["deos-ros2-bridge<br/>(Köprü)"]:::bridge
-    MAIN["Main STM32<br/>(Router)"]:::mcu
 
     JOY["Manuel Kumanda"]:::host
     BT["Bluetooth Modülü"]:::rf
 
-    LORA["LoRa Modülü<br/>(Ebyte E220)"]:::rf
     GCS["Ground Control<br/>(deos-ground-station)"]:::host
+    LORA["LoRa Modülü<br/>(Ebyte E220)"]:::rf
+
+    MAIN["Main STM32<br/>(Router)"]:::mcu
 
     RPI <-->|"ROS 2 Topics"| BRIDGE
     BRIDGE <-->|"Ethernet"| MAIN
+
     JOY -.->|"Bluetooth"| BT
     BT <-->|"UART"| MAIN
-    MAIN <-->|"UART"| LORA
-    LORA -.->|"RF"| GCS
+
+    GCS <-.->|"RF 433MHz"| LORA
+    LORA <-->|"UART"| MAIN
 
     CAN_BUS["CAN-FD Backbone"]:::bus
     TRACTION["Traction<br/>(Motor / İnvertör)"]:::can
