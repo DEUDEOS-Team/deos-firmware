@@ -1,4 +1,0 @@
-name: deos_core
-build:
-  cmake: .
-  kconfig: Kconfig

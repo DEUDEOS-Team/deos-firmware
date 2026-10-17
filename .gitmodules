@@ -1,3 +1,7 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/DEUDEOS-Team/deos-docs.git
+[submodule "lib/deos_core"]
+	path = lib/deos_core
+	url = https://github.com/DEUDEOS-Team/deos-core-protocol-stack.git
+	branch = feature/protocol-decoupling
