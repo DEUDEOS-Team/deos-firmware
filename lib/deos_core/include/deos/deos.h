@@ -4,6 +4,8 @@
 #include <deos/deos_icd.h>
 #include <deos/deos_types.h>
 #include <deos/deos_frame.h>
+#include <deos/deos_codec.h>
+#include <deos/deos_dispatcher.h>
 
 #ifdef __cplusplus
 extern "C" {

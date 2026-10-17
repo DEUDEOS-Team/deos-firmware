@@ -9,23 +9,10 @@ LOG_MODULE_REGISTER(deos_dispatch, LOG_LEVEL_INF);
 
 
 
-/**
- * @brief Kayitli uygulama mesaj isleyicisi (handler) yapisi.
- * Tablodaki her bir slot, belirli bir yerel dugumun dinledigi komutu ve
- * tetiklenecek fonksiyon gostericisini tutar.
- */
-struct deos_handler_entry {
-    bool in_use;                         /**< Bu slot su an aktif bir kayit iceriyor mu? */
-    deos_node_id_t local_node;           /**< Bu isleyiciyi kaydeden yerel mantiksal dugum ID'si */
-    deos_message_class_t message_class;  /**< Dinlenen mesaj sinifi (COMMAND, REQUEST, EVENT vb.) */
-    deos_service_id_t service;           /**< Dinlenen servis ID'si (SYSTEM, TRACTION, STEERING vb.) */
-    uint8_t command;                     /**< Dinlenen komut numarasi (orn: 0x01 HIZ_VER) */
-    deos_message_handler_t handler;      /**< Mesaj geldiginde calistirilacak callback fonksiyonu */
-    void *user_data;                     /**< Fonksiyona iletilecek kullanici ozel verisi (context pointer) */
-};
+#include <deos/deos_dispatcher.h>
 
-/** @brief Sistemde ayni anda kayitli olabilecek maksimum isleyici tablosu */
-static struct deos_handler_entry handler_registry[DEOS_MAX_HANDLERS];
+/** @brief Sistem genelinde kullanilan ana cekirdek dispatcher ornegi */
+static deos_dispatcher_t core_dispatcher;
 
 /**
  * @brief Dispatcher (mesaj dagitim) tablosunu baslatir ve sifirlar.
@@ -36,7 +23,7 @@ static struct deos_handler_entry handler_registry[DEOS_MAX_HANDLERS];
  */
 int deos_dispatch_init(void)
 {
-    memset(handler_registry, 0, sizeof(handler_registry));
+    deos_dispatcher_init(&core_dispatcher);
     LOG_DBG("Dispatcher initialized");
     return 0;
 }
@@ -73,39 +60,15 @@ int deos_register_handler_for_node(
         return -EPERM;
     }
 
-    int free_slot = -1;
+    int ret = deos_dispatcher_register_for_node(
+        &core_dispatcher, local_node, message_class, service, command, handler, user_data);
 
-    for (int i = 0; i < DEOS_MAX_HANDLERS; i++) {
-        if (!handler_registry[i].in_use) {
-            if (free_slot == -1) {
-                free_slot = i;
-            }
-        } else {
-            if (handler_registry[i].local_node == local_node &&
-                handler_registry[i].message_class == message_class &&
-                handler_registry[i].service == service &&
-                handler_registry[i].command == command) {
-                return -EEXIST; /* Duplicate */
-            }
-        }
+    if (ret == 0) {
+        LOG_DBG("Registered handler for Node: 0x%02X Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
+                local_node, message_class, service, command);
     }
 
-    if (free_slot == -1) {
-        return -ENOSPC; /* Full */
-    }
-
-    handler_registry[free_slot].local_node    = local_node;
-    handler_registry[free_slot].message_class = message_class;
-    handler_registry[free_slot].service       = service;
-    handler_registry[free_slot].command       = command;
-    handler_registry[free_slot].handler       = handler;
-    handler_registry[free_slot].user_data     = user_data;
-    handler_registry[free_slot].in_use        = true;
-
-    LOG_DBG("Registered handler for Node: 0x%02X Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
-            local_node, message_class, service, command);
-
-    return 0;
+    return ret;
 }
 
 /**
@@ -157,19 +120,8 @@ deos_message_handler_t deos_dispatch_find_handler(
     uint8_t command,
     void **out_user_data)
 {
-    for (int i = 0; i < DEOS_MAX_HANDLERS; i++) {
-        if (handler_registry[i].in_use &&
-            handler_registry[i].local_node == local_node &&
-            handler_registry[i].message_class == message_class &&
-            handler_registry[i].service == service &&
-            handler_registry[i].command == command) {
-            if (out_user_data) {
-                *out_user_data = handler_registry[i].user_data;
-            }
-            return handler_registry[i].handler;
-        }
-    }
-    return NULL;
+    return deos_dispatcher_find(
+        &core_dispatcher, local_node, message_class, service, command, out_user_data);
 }
 
 /**
@@ -234,33 +186,8 @@ void deos_dispatch_local(const deos_message_t *msg)
     }
 
     /* Application Handlers */
-    bool handled = false;
-    bool is_broadcast = (msg->destination == DEOS_NODE_GLOBAL_BROADCAST || 
-                         msg->destination == DEOS_NODE_CAN_BROADCAST);
-
-    for (int i = 0; i < DEOS_MAX_HANDLERS; i++) {
-        if (handler_registry[i].in_use &&
-            (handler_registry[i].local_node == msg->destination || is_broadcast) &&
-            handler_registry[i].message_class == msg->message_class &&
-            handler_registry[i].service == msg->service &&
-            handler_registry[i].command == msg->command) {
-            
-            int ret = handler_registry[i].handler(msg, handler_registry[i].user_data);
-            if (ret != 0) {
-                LOG_WRN("Handler returned error %d for Cmd: 0x%X (Node: 0x%02X)",
-                        ret, msg->command, handler_registry[i].local_node);
-            }
-            handled = true;
-
-            /* Unicast mesajlar tek bir dugume aittir, ilk eslesmede donguyu bitir.
-             * Broadcast mesajlar ayni islemcideki tum dinleyici dugumlere dagitilmalidir. */
-            if (!is_broadcast) {
-                break;
-            }
-        }
-    }
-
-    if (!handled) {
+    int matched = deos_dispatcher_dispatch(&core_dispatcher, msg);
+    if (matched == 0) {
         LOG_DBG("No handler for Class: 0x%X, Svc: 0x%X, Cmd: 0x%X",
                 msg->message_class, msg->service, msg->command);
     }

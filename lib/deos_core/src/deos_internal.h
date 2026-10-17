@@ -33,15 +33,9 @@ extern "C" {
 #endif
 
 /*
- * Endian Helpers (Little-Endian is default for DEOS wire format)
+ * Endian Helpers (Provided by deos_protocol)
  */
-void deos_put_u16_le(uint8_t *dst, uint16_t value);
-void deos_put_i16_le(uint8_t *dst, int16_t value);
-void deos_put_u32_le(uint8_t *dst, uint32_t value);
-
-uint16_t deos_get_u16_le(const uint8_t *src);
-int16_t  deos_get_i16_le(const uint8_t *src);
-uint32_t deos_get_u32_le(const uint8_t *src);
+#include <deos/deos_codec.h>
 
 /*
  * Sequence and Node Management

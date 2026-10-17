@@ -8,6 +8,7 @@ add_library(deos_core STATIC
     src/deos_fault.c
     src/deos_subscription.c
     src/deos_frame.c
+    src/deos_dispatcher.c
 )
-target_include_directories(deos_core PUBLIC include)
+target_include_directories(deos_core PUBLIC include ../deos_protocol/include)
 target_link_libraries(deos_core PRIVATE zephyr_interface)

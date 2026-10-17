@@ -9,7 +9,7 @@ target_sources(app PRIVATE
     src/daly_parser.cpp
 
     ../../lib/deos_core/src/deos_core.c
-    ../../lib/deos_core/src/deos_tx.c
+    ../../lib/deos_core/src/deos_send.c
     ../../lib/deos_core/src/deos_dispatch.c
     ../../lib/deos_core/src/deos_codec.c
     ../../lib/deos_core/src/deos_network.c
