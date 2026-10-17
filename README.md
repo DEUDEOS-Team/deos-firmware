@@ -50,11 +50,17 @@ graph TD
     LORA["LoRa Modülü<br/>(Ebyte E220)"]:::rf
     GCS["Ground Control<br/>(deos-ground-station)"]:::host
 
+    BT["Bluetooth Modülü"]:::rf
+    GAMEPAD["Gamepad"]:::host
+
     RPI <-->|"ROS 2 Topics"| BRIDGE
     BRIDGE <-->|"Ethernet"| MAIN
 
     MAIN <-->|"UART"| LORA
     LORA -.->|"RF"| GCS
+
+    MAIN <-->|"UART"| BT
+    BT -.->|"Wireless"| GAMEPAD
 
     CAN_BUS["CAN-FD Backbone"]:::bus
     TRACTION["Traction<br/>(Motor / İnvertör)"]:::can
@@ -94,6 +100,8 @@ DEOS projesi modüler bir mimaride yönetilmektedir. Tüm depoların ve uygulama
 | **`apps/bms_gateway`** | CAN Düğümü (0x30) | **Ayşe Ceren Akdamar** | Batarya yönetim sistemi ağ geçidi, hücre voltaj ve sıcaklık takibi |
 | **`apps/main_node`** | CAN Düğümü (0x03) | **Emir Arkalı** | Araç içi merkezi ağ geçidi ve yönlendirici (Nucleo-H563ZI) |
 | **`apps/main_node/.../uart_lora.cpp`** | LoRa Sürücüsü | **Alper Bora** | Ebyte E220 UART LoRa modülü sürücüsü ve paket yönlendirme |
+| **`Bluetooth Modülü`** | Donanım (UART) | *Bağlı repo yok* | Gamepad kablosuz sürüş kontrolü için Bluetooth modülü (Henüz deposu yok) |
+| **`Gamepad`** | Harici Donanım | *Operatör* | Bluetooth üzerinden araç sürüş komutları ileten kablosuz gamepad kumandası |
 | [**`deos-docs`**](https://github.com/DEUDEOS-Team/deos-docs) | Alt Modül (`docs`) | **Emir Arkalı** | Resmi LaTeX ICD şartnameleri ve ağ mimarisi kuralları |
 
 ---
