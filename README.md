@@ -12,44 +12,63 @@ DEOS ekosistemi; gömülü mikrodenetleyiciler (STM32), otonomi bilgisayarı (Ra
 
 ```mermaid
 graph TD
-    classDef mcu fill:#1d4ed8,stroke:#60a5fa,stroke-width:3px,color:#ffffff;
-    classDef host fill:#0f172a,stroke:#94a3b8,stroke-width:2px,color:#ffffff;
-    classDef rf fill:#581c87,stroke:#c084fc,stroke-width:2px,color:#ffffff;
-    classDef can fill:#065f46,stroke:#34d399,stroke-width:2px,color:#ffffff;
-    classDef bms fill:#1e293b,stroke:#64748b,stroke-width:1.5px,color:#cbd5e1;
-    classDef bus fill:#0284c7,stroke:#38bdf8,stroke-width:5px,color:#ffffff;
+    classDef root fill:#1f6feb,stroke:#388bfd,stroke-width:2px,color:#ffffff;
+    classDef sub fill:#238636,stroke:#2ea043,stroke-width:1.5px,color:#ffffff;
+    classDef dev fill:#8957e5,stroke:#a371f7,stroke-width:1.5px,color:#ffffff;
+    classDef hw fill:#161b22,stroke:#484f58,stroke-width:1.5px,color:#e6edf3;
+    classDef bus fill:#0969da,stroke:#54aeff,stroke-width:3px,color:#ffffff;
+    classDef node fill:#21262d,stroke:#6e7681,stroke-width:1.5px,color:#e6edf3;
 
-    %% 1. Otonom Hesaplama Ünitesi
-    PI["🍓 Raspberry Pi / Jetson<br/><b>Otonom Sürüş & ROS 2</b>"]:::host
-    PI <== "Ethernet" ==> MAIN
+    subgraph REPOS ["Yazılım ve Depo Mimarisi"]
+        FW["deos-firmware (Ana Depo)"]:::root
+        CORE["lib/deos_core (Router & Düğüm Motoru)"]:::sub
+        PROTO["lib/deos_protocol (Universal Frame & Codec)"]:::sub
+        CAN_DRV["lib/deos_transport_can (CAN-FD Sürücüsü)"]:::sub
+        DOCS["docs (Merkezi Şartnameler & ICD)"]:::sub
 
-    %% 2. Merkez: Main STM32 Router
-    MAIN["🧠 Main STM32<br/><b>Router & Gateway (deos-core)</b>"]:::mcu
+        FW -->|"Submodule"| CORE
+        FW -->|"Submodule"| PROTO
+        FW -->|"Submodule"| CAN_DRV
+        FW -->|"Submodule"| DOCS
 
-    %% 3. Sol Kısım: Kumanda & Bluetooth
-    JOY["🎮 Manuel Kumanda<br/><i>(Gamepad / RC Controller)</i>"]:::host
-    BT["📶 Bluetooth Modülü<br/><i>(HC-05 / BLE)</i>"]:::rf
-    JOY <.. "Bluetooth" ..> BT
-    BT <== "UART" ==> MAIN
+        DEV_EMIR["Emir Arkalı (Core Mimarisi)"]:::dev
+        DEV_CAN["Donanım / CAN Ekibi (FDCAN Sürücüsü)"]:::dev
+        CORE --- DEV_EMIR
+        CAN_DRV --- DEV_CAN
+    end
 
-    %% 4. Sağ Kısım: LoRa & Ground Control (deos-ground-station)
-    LORA["📡 LoRa Modülü<br/><i>(SX1262 Telemetri)</i>"]:::rf
-    GCS["💻 Ground Control<br/><b><a href='https://github.com/DEUDEOS-Team/deos-ground-station'>deos-ground-station</a></b><br/><i>(Telemetri & GUI)</i>"]:::host
-    MAIN <== "UART" ==> LORA
-    LORA <.. "RF Link (LoRa)" ..> GCS
+    subgraph HARDWARE ["Donanım ve Haberleşme Topolojisi"]
+        MAIN["Main STM32 Router"]:::root
+        RPI["Raspberry Pi / Jetson (ROS 2)"]:::hw
+        BT["Bluetooth Modülü"]:::hw
+        JOY["Manuel Kumanda (Gamepad)"]:::hw
+        LORA["LoRa Modülü"]:::hw
+        GCS["Ground Station (deos-ground-station)"]:::hw
 
-    %% 5. Alt Kısım: CAN-FD Backbone Veri Yolu
-    MAIN <== "TX / RX" ==> BUS["══════════════════════════════════ CAN-FD Backbone ══════════════════════════════════"]:::bus
+        RPI <-->|"Ethernet"| MAIN
+        JOY -.->|"Bluetooth"| BT
+        BT <-->|"UART"| MAIN
+        MAIN <-->|"UART"| LORA
+        LORA -.->|"RF Link"| GCS
 
-    %% 6. CAN Hattına Bağlı Düğümler
-    BUS <==> TRACTION["⚙️ Traction<br/><b>Motor / İnvertör</b>"]:::can
-    BUS <==> BRAKE["🛑 Brake<br/><b>Fren Sistemi</b>"]:::can
-    BUS <==> STEERING["🎯 Steering<br/><b>Steer-by-Wire</b>"]:::can
-    BUS <==> BMS_GW["🔋 BMS Gateway<br/><b>Batarya Ağ Geçidi</b>"]:::can
+        CAN_BUS["CAN-FD Backbone"]:::bus
+        TRACTION["Traction (Motor / İnvertör)"]:::node
+        BRAKE["Brake (Fren)"]:::node
+        STEERING["Steering (Direksiyon)"]:::node
+        BMS_GW["BMS Gateway"]:::node
+        BMS1["BMS 1"]:::node
+        BMS2["BMS 2"]:::node
 
-    %% 7. Batarya Hücre Paketleri
-    BMS_GW <--> BMS1["🔋 BMS 1 (Master Paket)"]:::bms
-    BMS_GW <--> BMS2["🔋 BMS 2 (Slave Paket)"]:::bms
+        MAIN <-->|"CAN-FD"| CAN_BUS
+        CAN_BUS <--> TRACTION
+        CAN_BUS <--> BRAKE
+        CAN_BUS <--> STEERING
+        CAN_BUS <--> BMS_GW
+        BMS_GW <--> BMS1
+        BMS_GW <--> BMS2
+    end
+
+    CORE -.->|"İcra Donanımı"| MAIN
 ```
 
 ---
