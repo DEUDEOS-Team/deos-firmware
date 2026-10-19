@@ -11,6 +11,7 @@
 #include <vector>
 #include <cstring>
 #include <cassert>
+#include <cerrno>
 
 #include <deos/deos_frame.h>
 #include <deos/deos_types.h>
@@ -120,6 +121,9 @@ int main() {
     int corrupt_status = deos_frame_decode(wire_frame, encoded_len, &rx_msg);
     assert(corrupt_status != 0); // Must be rejected!
     wire_frame[DEOS_UF_LEN_OFFSET] = original_len_byte; // Restore valid frame
+
+    tx_msg.payload_len = DEOS_MAX_PAYLOAD_LEN + 1;
+    assert(deos_frame_encode(&tx_msg, wire_frame, sizeof(wire_frame)) == -EMSGSIZE);
     std::cout << "PASSED\n";
 
     // -------------------------------------------------------------
