@@ -1,6 +1,7 @@
 #pragma once
 #include <deos/deos.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
 
 class LedController {
 public:
@@ -17,6 +18,7 @@ private:
     struct gpio_dt_spec led_red;   // led2 (Brake Light)
 
     deos_state_t last_system_state = DEOS_STATE_INIT;
+    mutable struct k_mutex state_lock;
     bool req_headlight = false;
     bool req_brake = false;
     bool req_turn_left = false;

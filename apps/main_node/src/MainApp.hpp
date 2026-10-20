@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deos/deos.h>
+#include <zephyr/sys/atomic.h>
 #include "io/LedController.hpp"
 #include "io/SafetyManager.hpp"
 #include "network/NetworkMonitor.hpp"
@@ -12,7 +13,7 @@ public:
     int init();
     void run();
 
-    deos_state_t current_state = DEOS_STATE_INIT;
+    deos_state_t get_state() const;
     void set_state(deos_state_t new_state);
     
     NetworkMonitor network_monitor;
@@ -24,6 +25,8 @@ public:
 private:
     MainApp() = default;
     ~MainApp() = default;
+
+    atomic_t current_state = ATOMIC_INIT(DEOS_STATE_INIT);
 
     // Non-copyable
     MainApp(const MainApp&) = delete;

@@ -36,7 +36,7 @@ extern "C" {
             reported_state = (deos_state_t)pl->current_state;
         }
         
-        app.network_monitor.update_heartbeat(msg->source, reported_state, app.current_state);
+        app.network_monitor.update_heartbeat(msg->source, reported_state, app.get_state());
         return 0;
     }
 
@@ -157,23 +157,31 @@ int MainApp::init() {
     return 0;
 }
 
-void MainApp::set_state(deos_state_t new_state) {
-    if (current_state == new_state) return;
+deos_state_t MainApp::get_state() const {
+    return (deos_state_t)atomic_get(&current_state);
+}
 
-    current_state = new_state;
+void MainApp::set_state(deos_state_t new_state) {
+    atomic_val_t previous_state = atomic_set(&current_state, (atomic_val_t)new_state);
+    if ((deos_state_t)previous_state == new_state) return;
+
+    /* Apply local safety effects before any transport operation. The LED
+     * controller serializes GPIO access across the main and RX threads. */
+    led_controller.update(new_state, k_uptime_get_32());
+    LOG_INF("System State changed to: %s", state_to_str(new_state));
 
     /* Durum değiştiğinde ağdaki tüm nodlara bildir (Broadcast) */
     deos_priority_t prio = (new_state == DEOS_STATE_SAFE || new_state == DEOS_STATE_FAULT) 
                             ? DEOS_PRIO_EMERGENCY : DEOS_PRIO_CONTROL;
 
-    deos_send(DEOS_NODE_GLOBAL_BROADCAST, prio, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, 
-              DEOS_CMD_SYSTEM_SET_STATE, &current_state, sizeof(current_state));
+    int ret = deos_send(DEOS_NODE_GLOBAL_BROADCAST, prio, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM,
+                        DEOS_CMD_SYSTEM_SET_STATE, &new_state, sizeof(new_state));
+    if (ret != 0) {
+        LOG_WRN("Failed to broadcast state %s: %d", state_to_str(new_state), ret);
+    }
 
     /* Durum değiştiğinde aydınlatma durumunu da güncelle ve yayınla */
-    led_controller.update(current_state, k_uptime_get_32());
     broadcast_lighting_status();
-
-    LOG_INF("System State changed to: %s", state_to_str(current_state));
 }
 
 void MainApp::broadcast_lighting_status() {
@@ -214,7 +222,7 @@ void MainApp::run() {
         network_monitor.check_watchdog(*this);
 
         /* --- STATE MACHINE (DURUM MAKİNESİ) Görselleri --- */
-        led_controller.update(current_state, ms_counter);
+        led_controller.update(get_state(), ms_counter);
 
         ms_counter += 10;
         k_sleep(K_MSEC(10));

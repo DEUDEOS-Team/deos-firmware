@@ -11,7 +11,9 @@ LedController::LedController() :
     led_green(GPIO_DT_SPEC_GET(LED_GREEN_NODE, gpios)),
     led_blue(GPIO_DT_SPEC_GET(LED_BLUE_NODE, gpios)),
     led_red(GPIO_DT_SPEC_GET(LED_RED_NODE, gpios)) 
-{}
+{
+    k_mutex_init(&state_lock);
+}
 
 int LedController::init() {
     if (!gpio_is_ready_dt(&led_green)) {
@@ -35,6 +37,7 @@ int LedController::init() {
 }
 
 void LedController::update(deos_state_t current_state, uint32_t ms_counter) {
+    k_mutex_lock(&state_lock, K_FOREVER);
     last_system_state = current_state;
     bool g = false; // Right signal (Green)
     bool b = false; // Left signal (Blue)
@@ -87,9 +90,13 @@ void LedController::update(deos_state_t current_state, uint32_t ms_counter) {
     gpio_pin_set_dt(&led_green, g);
     gpio_pin_set_dt(&led_blue, b);
     gpio_pin_set_dt(&led_red, r);
+    k_mutex_unlock(&state_lock);
 }
 
 int LedController::set_light(uint8_t light_id, bool turn_on) {
+    k_mutex_lock(&state_lock, K_FOREVER);
+    int ret = 0;
+
     switch (light_id) {
     case DEOS_LIGHT_HEADLIGHT:
         req_headlight = turn_on;
@@ -116,26 +123,31 @@ int LedController::set_light(uint8_t light_id, bool turn_on) {
         break;
     default:
         LOG_WRN("Unknown Light ID: 0x%02X", light_id);
-        return -EINVAL;
+        ret = -EINVAL;
+        break;
     }
-    return 0;
+
+    k_mutex_unlock(&state_lock);
+    return ret;
 }
 
 struct deos_lighting_status_payload LedController::get_status() const {
+    k_mutex_lock(&state_lock, K_FOREVER);
     struct deos_lighting_status_payload status = {0};
+    deos_state_t system_state = last_system_state;
 
     // Headlight status
     status.headlight_state = req_headlight ? DEOS_LIGHT_STATE_ON : DEOS_LIGHT_STATE_OFF;
 
     // Brake light status (Active if safe/e-stop triggered or explicitly requested)
-    if (last_system_state == DEOS_STATE_SAFE || req_brake) {
+    if (system_state == DEOS_STATE_SAFE || req_brake) {
         status.brake_light_state = DEOS_LIGHT_STATE_ON;
     } else {
         status.brake_light_state = DEOS_LIGHT_STATE_OFF;
     }
 
     // Left turn signal status
-    if (last_system_state == DEOS_STATE_STANDBY || last_system_state == DEOS_STATE_SAFE || req_hazard) {
+    if (system_state == DEOS_STATE_STANDBY || system_state == DEOS_STATE_SAFE || req_hazard) {
         status.turn_left_state = DEOS_LIGHT_STATE_BLINKING;
     } else if (req_turn_left) {
         status.turn_left_state = DEOS_LIGHT_STATE_BLINKING;
@@ -144,7 +156,7 @@ struct deos_lighting_status_payload LedController::get_status() const {
     }
 
     // Right turn signal status
-    if (last_system_state == DEOS_STATE_STANDBY || last_system_state == DEOS_STATE_SAFE || req_hazard) {
+    if (system_state == DEOS_STATE_STANDBY || system_state == DEOS_STATE_SAFE || req_hazard) {
         status.turn_right_state = DEOS_LIGHT_STATE_BLINKING;
     } else if (req_turn_right) {
         status.turn_right_state = DEOS_LIGHT_STATE_BLINKING;
@@ -153,12 +165,13 @@ struct deos_lighting_status_payload LedController::get_status() const {
     }
 
     // Hazard status
-    if (last_system_state == DEOS_STATE_STANDBY || last_system_state == DEOS_STATE_SAFE || req_hazard) {
+    if (system_state == DEOS_STATE_STANDBY || system_state == DEOS_STATE_SAFE || req_hazard) {
         status.hazard_state = DEOS_LIGHT_STATE_BLINKING;
     } else {
         status.hazard_state = DEOS_LIGHT_STATE_OFF;
     }
 
     status.fault_flags = 0x00; // All ok
+    k_mutex_unlock(&state_lock);
     return status;
 }
