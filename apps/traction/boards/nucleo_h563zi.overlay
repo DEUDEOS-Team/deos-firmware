@@ -1,0 +1,22 @@
+/*
+ * Board-specific overlay for NUCLEO-H563ZI (STM32H5)
+ * CAN-FD (FDCAN1) Physical Pin Mapping:
+ *   RX: PD0
+ *   TX: PD1
+ * 
+ * LEDs Mapping:
+ *   led0 -> green_led_1 (LD1, PB0)
+ *   led1 -> yellow_led_1 (LD2, PF4)
+ *   led2 -> red_led_1 (LD3, PG4)
+ */
+
+/ {
+	aliases {
+		led2 = &red_led_1;
+	};
+};
+
+&fdcan1 {
+	pinctrl-0 = <&fdcan1_rx_pd0 &fdcan1_tx_pd1>;
+	pinctrl-names = "default";
+};

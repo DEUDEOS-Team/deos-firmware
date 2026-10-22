@@ -19,9 +19,11 @@ target_sources(app PRIVATE
     ../../lib/deos_core/src/deos_fault.c
     ../../lib/deos_core/src/deos_subscription.c
     ../../lib/deos_core/src/deos_frame.c
+    ../../lib/deos_core/src/deos_registry.c
     ../../lib/deos_transport_can/src/deos_can_transport.c
     ../../lib/deos_transport_can/src/deos_can_codec.c
 )
 
 zephyr_include_directories(../../lib/deos_core/include)
+zephyr_include_directories(../../lib/deos_protocol/include)
 zephyr_include_directories(../../lib/deos_transport_can/include)

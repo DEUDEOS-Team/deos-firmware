@@ -1,0 +1,16 @@
+/*
+ * Application Overlay for Traction Node
+ * Configures CAN-FD primary controller and bitrates according to DEOS ICD
+ */
+/ {
+	chosen {
+		zephyr,can-primary = &fdcan1;
+	};
+};
+
+&fdcan1 {
+	status = "okay";
+	bitrate = <500000>;
+	bitrate-data = <2000000>;
+};
+

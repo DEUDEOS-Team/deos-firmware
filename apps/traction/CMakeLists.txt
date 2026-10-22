@@ -1,18 +1,15 @@
 cmake_minimum_required(VERSION 3.20.0)
 
+set(DTC_OVERLAY_FILE 
+    "${CMAKE_CURRENT_LIST_DIR}/app.overlay"
+    "${CMAKE_CURRENT_LIST_DIR}/boards/${BOARD}.overlay"
+)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(deos_traction)
 
-target_include_directories(app PRIVATE include)
-
 target_sources(app PRIVATE
     src/main.c
-    src/traction_app.c
-    src/traction_control.c
-    src/traction_handlers.c
-    src/traction_config.c
-    src/traction_hw.c
-    
     ../../lib/deos_core/src/deos_core.c
     ../../lib/deos_core/src/deos_send.c
     ../../lib/deos_core/src/deos_dispatch.c
@@ -22,9 +19,11 @@ target_sources(app PRIVATE
     ../../lib/deos_core/src/deos_fault.c
     ../../lib/deos_core/src/deos_subscription.c
     ../../lib/deos_core/src/deos_frame.c
+    ../../lib/deos_core/src/deos_registry.c
     ../../lib/deos_transport_can/src/deos_can_transport.c
     ../../lib/deos_transport_can/src/deos_can_codec.c
 )
 
 zephyr_include_directories(../../lib/deos_core/include)
+zephyr_include_directories(../../lib/deos_protocol/include)
 zephyr_include_directories(../../lib/deos_transport_can/include)
