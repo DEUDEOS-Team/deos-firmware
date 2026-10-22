@@ -36,13 +36,19 @@ extern "C" {
             reported_state = (deos_state_t)pl->current_state;
         }
         
-        app.network_monitor.update_heartbeat(msg->source, reported_state, app.current_state);
+        app.network_monitor.update_heartbeat(msg->source, reported_state, app.get_state());
         return 0;
     }
 
     int set_state_rx_callback(const deos_message_t *msg, void *user_data) {
         MainApp& app = MainApp::getInstance();
         
+        /* Eğer bu mesaj Main STM32'nin kendi yayınladığı genel durum broadcast'i ise,
+         * döngü (loopback) oluşturup gereksiz yanıt basmamak için işlemiyoruz. */
+        if (msg->source == DEOS_NODE_MAIN_STM32) {
+            return 0;
+        }
+
         if (msg->payload_len == 1) {
             deos_state_t req_state = (deos_state_t)msg->payload[0];
             LOG_INF("Received SET_STATE command from %s (0x%02X): requesting state %s", 
@@ -53,6 +59,16 @@ extern "C" {
             LOG_WRN("Invalid SET_STATE payload length: %d", msg->payload_len);
             deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
         }
+        return 0;
+    }
+
+    int get_state_rx_callback(const deos_message_t *msg, void *user_data) {
+        MainApp& app = MainApp::getInstance();
+        deos_state_t current = app.get_state();
+        LOG_INF("Received GET_STATE request from %s (0x%02X), replying with state %s", 
+                deos_node_name(msg->source), msg->source, state_to_str(current));
+        uint8_t state_byte = (uint8_t)current;
+        deos_send_response(msg, DEOS_RESULT_SUCCESS, &state_byte, sizeof(state_byte));
         return 0;
     }
 
@@ -70,7 +86,6 @@ extern "C" {
             if (ret == 0) {
                 struct deos_lighting_status_payload status = app.led_controller.get_status();
                 deos_send_response(msg, DEOS_RESULT_SUCCESS, &status, sizeof(status));
-                app.broadcast_lighting_status();
             } else {
                 deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
             }
@@ -138,6 +153,10 @@ int MainApp::init() {
 
     /* SET_STATE komutunu (Cmd: 0x02, Class: COMMAND) dinle */
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE, set_state_rx_callback, NULL);
+    deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE, set_state_rx_callback, NULL);
+
+    /* GET_STATE isteğini (Cmd: 0x01, Class: REQUEST) dinle */
+    deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_GET_STATE, get_state_rx_callback, NULL);
 
     /* LIGHTING (0x08) komut ve durum sorgularını dinle */
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_TURN_ON, lighting_command_rx_callback, NULL);
@@ -157,29 +176,28 @@ int MainApp::init() {
     return 0;
 }
 
-void MainApp::set_state(deos_state_t new_state) {
-    if (current_state == new_state) return;
+deos_state_t MainApp::get_state() const {
+    return (deos_state_t)atomic_get(&current_state);
+}
 
-    current_state = new_state;
+void MainApp::set_state(deos_state_t new_state) {
+    atomic_val_t previous_state = atomic_set(&current_state, (atomic_val_t)new_state);
+    if ((deos_state_t)previous_state == new_state) return;
+
+    /* Apply local safety effects before any transport operation. The LED
+     * controller serializes GPIO access across the main and RX threads. */
+    led_controller.update(new_state, k_uptime_get_32());
+    LOG_INF("System State changed to: %s", state_to_str(new_state));
 
     /* Durum değiştiğinde ağdaki tüm nodlara bildir (Broadcast) */
     deos_priority_t prio = (new_state == DEOS_STATE_SAFE || new_state == DEOS_STATE_FAULT) 
                             ? DEOS_PRIO_EMERGENCY : DEOS_PRIO_CONTROL;
 
-    deos_send(DEOS_NODE_GLOBAL_BROADCAST, prio, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, 
-              DEOS_CMD_SYSTEM_SET_STATE, &current_state, sizeof(current_state));
-
-    /* Durum değiştiğinde aydınlatma durumunu da güncelle ve yayınla */
-    led_controller.update(current_state, k_uptime_get_32());
-    broadcast_lighting_status();
-
-    LOG_INF("System State changed to: %s", state_to_str(current_state));
-}
-
-void MainApp::broadcast_lighting_status() {
-    struct deos_lighting_status_payload status = led_controller.get_status();
-    deos_send(DEOS_NODE_CAN_BROADCAST, DEOS_PRIO_STATUS, DEOS_CLASS_STATUS, DEOS_SERVICE_LIGHTING,
-              DEOS_CMD_LIGHTING_STATUS, &status, sizeof(status));
+    int ret = deos_send(DEOS_NODE_GLOBAL_BROADCAST, prio, DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM,
+                        DEOS_CMD_SYSTEM_SET_STATE, &new_state, sizeof(new_state));
+    if (ret != 0) {
+        LOG_WRN("Failed to broadcast state %s: %d", state_to_str(new_state), ret);
+    }
 }
 
 void MainApp::run() {
@@ -214,7 +232,7 @@ void MainApp::run() {
         network_monitor.check_watchdog(*this);
 
         /* --- STATE MACHINE (DURUM MAKİNESİ) Görselleri --- */
-        led_controller.update(current_state, ms_counter);
+        led_controller.update(get_state(), ms_counter);
 
         ms_counter += 10;
         k_sleep(K_MSEC(10));

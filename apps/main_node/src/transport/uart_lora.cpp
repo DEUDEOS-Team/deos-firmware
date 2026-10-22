@@ -13,7 +13,8 @@ static const struct gpio_dt_spec aux_pin = GPIO_DT_SPEC_GET(LORA_AUX_NODE, gpios
 LOG_MODULE_REGISTER(uart_lora, LOG_LEVEL_INF);
 
 #define LORA_TX_QUEUE_SIZE 16
-#define LORA_THREAD_STACK_SIZE 1024
+#define LORA_RX_THREAD_STACK_SIZE 3072
+#define LORA_TX_THREAD_STACK_SIZE 2048
 #define LORA_THREAD_PRIO 5
 #define RING_BUF_SIZE 1024
 
@@ -25,8 +26,8 @@ LOG_MODULE_REGISTER(uart_lora, LOG_LEVEL_INF);
 #define LORA_FLAG_IS_ACK   0x02
 #define LORA_MAX_PAYLOAD   100
 
-static K_KERNEL_STACK_DEFINE(lora_rx_stack, LORA_THREAD_STACK_SIZE);
-static K_KERNEL_STACK_DEFINE(lora_tx_stack, LORA_THREAD_STACK_SIZE);
+static K_KERNEL_STACK_DEFINE(lora_rx_stack, LORA_RX_THREAD_STACK_SIZE);
+static K_KERNEL_STACK_DEFINE(lora_tx_stack, LORA_TX_THREAD_STACK_SIZE);
 static struct k_thread lora_rx_thread_data;
 static struct k_thread lora_tx_thread_data;
 
@@ -256,11 +257,13 @@ int UartLora::init() {
                     K_KERNEL_STACK_SIZEOF(lora_tx_stack),
                     tx_thread_entry, this, NULL, NULL,
                     LORA_THREAD_PRIO, 0, K_NO_WAIT);
+    k_thread_name_set(&lora_tx_thread_data, "lora_tx");
 
     k_thread_create(&lora_rx_thread_data, lora_rx_stack,
                     K_KERNEL_STACK_SIZEOF(lora_rx_stack),
                     rx_thread_entry, this, NULL, NULL,
                     LORA_THREAD_PRIO, 0, K_NO_WAIT);
+    k_thread_name_set(&lora_rx_thread_data, "lora_rx");
 
     LOG_INF("LoRa UART interface initialized");
     return 0;
