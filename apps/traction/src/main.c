@@ -360,6 +360,39 @@ static int handle_lighting_status(const deos_message_t *msg, void *user_data)
     return 0;
 }
 
+static void can_state_change_cb(const struct device *dev, enum can_state state,
+                                struct can_bus_err_cnt err_cnt, void *user_data)
+{
+    ARG_UNUSED(dev);
+    ARG_UNUSED(user_data);
+    const char *st_names[] = {"ERROR_ACTIVE", "ERROR_WARNING", "ERROR_PASSIVE", "BUS_OFF", "STOPPED"};
+    const char *st_str = (state <= CAN_STATE_STOPPED) ? st_names[state] : "UNKNOWN";
+    LOG_WRN("CAN Bus State Transition: %s | TEC: %u | REC: %u",
+            st_str, err_cnt.tx_err_cnt, err_cnt.rx_err_cnt);
+}
+
+/**
+ * @brief Raw CAN RX debug callback to inspect any frame physically appearing on the wire.
+ */
+static void raw_can_callback(const struct device *dev, struct can_frame *frame, void *user_data)
+{
+    ARG_UNUSED(dev);
+    ARG_UNUSED(user_data);
+
+    LOG_INF("================================================================");
+    LOG_INF(">>> [RAW CAN RX ON WIRE] <<<");
+    LOG_INF("    ID: 0x%08X | IDE(Ext): %d | FDF(FD): %d | BRS: %d | DLC: %d",
+            frame->id,
+            (frame->flags & CAN_FRAME_IDE) ? 1 : 0,
+            (frame->flags & CAN_FRAME_FDF) ? 1 : 0,
+            (frame->flags & CAN_FRAME_BRS) ? 1 : 0,
+            frame->dlc);
+    LOG_INF("    Data[0..7]: %02X %02X %02X %02X %02X %02X %02X %02X",
+            frame->data[0], frame->data[1], frame->data[2], frame->data[3],
+            frame->data[4], frame->data[5], frame->data[6], frame->data[7]);
+    LOG_INF("================================================================");
+}
+
 /* ========================================================================= */
 /*                               MAIN ENTRY POINT                            */
 /* ========================================================================= */
@@ -409,6 +442,24 @@ int main(void)
     }
     LOG_INF("CAN-FD Transport initialized on %s (500k nominal, 2M data).", can_dev->name);
 
+    can_set_state_change_callback(can_dev, can_state_change_cb, NULL);
+
+    /* Register raw debug filters to intercept and log ALL CAN traffic on the wire */
+    struct can_filter raw_ext = {
+        .flags = CAN_FILTER_IDE,
+        .id = 0,
+        .mask = 0
+    };
+    int r_ext = can_add_rx_filter(can_dev, raw_can_callback, NULL, &raw_ext);
+
+    struct can_filter raw_std = {
+        .flags = 0,
+        .id = 0,
+        .mask = 0
+    };
+    int r_std = can_add_rx_filter(can_dev, raw_can_callback, NULL, &raw_std);
+    LOG_INF("Promiscuous CAN filters attached: ext_id=%d, std_id=%d", r_ext, r_std);
+
     /* 4. Register Message Handlers */
     /* System Handlers */
     deos_register_handler(DEOS_CLASS_NETWORK, DEOS_SERVICE_SYSTEM,
@@ -451,9 +502,8 @@ int main(void)
 
     LOG_INF("DEOS Traction node is fully RUNNING on CAN-FD bus.");
 
-    /* 6. Main Test Loop (Runs at 20 ms for smooth LED state transitions) */
+    /* 6. Main Loop (Runs at 20 ms for smooth LED state transitions) */
     uint32_t ms_counter = 0;
-    uint32_t ping_counter = 0;
 
     while (1) {
         k_sleep(K_MSEC(20));
@@ -478,25 +528,6 @@ int main(void)
                 g_simulated_speed = 0;
                 g_motor_current = 0;
             }
-        }
-
-        /* 5000 ms tasks: Send PING to Main Router */
-        if (ms_counter % 5000 == 0) {
-            ping_counter++;
-            int send_ret = deos_send_ping(DEOS_NODE_MAIN_STM32, ping_counter);
-            if (send_ret == 0) {
-                g_tx_count++;
-                LOG_INF("TX [PING #%u] -> Main Router (0x%02X)... Waiting for PONG reply",
-                        ping_counter, DEOS_NODE_MAIN_STM32);
-            } else {
-                LOG_WRN("Failed to send PING to Main Router: %d", send_ret);
-            }
-        }
-
-        /* 10000 ms tasks: Traffic Statistics */
-        if (ms_counter % 10000 == 0) {
-            LOG_INF("--- CAN-FD Traffic Stats: TX Total = %u msgs | RX Total = %u msgs | State: %s ---",
-                    g_tx_count, g_rx_count, state_to_str(g_current_state));
         }
     }
 
