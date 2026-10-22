@@ -2,6 +2,14 @@
 
 These rules apply to ALL AI assistants, coders, and agents (Gemini, Claude, DeepSeek, Cursor, Copilot, etc.) working on this repository.
 
+## 0. Mandatory AI Context Workflow
+
+- **Read Context First**: Every agent MUST read the root-level `AI_CONTEXT.md` completely before scanning the repository or making changes. Use its `TARGETED_READ_MAP` to open only the source files relevant to the task. Do not begin with a full-codebase scan unless the context is missing, inconsistent, or the user explicitly requests a repository-wide audit.
+- **Source Remains Authoritative**: `AI_CONTEXT.md` is a fast operational index, not a replacement for source verification. For any value or behavior being changed, verify the targeted canonical source paths listed in the context. If source and context disagree, follow the source and correct the context in the same change.
+- **Keep Context Current**: Any change that affects architecture, node IDs or ownership, services/commands, payloads, routing, transports, concurrency, application responsibilities, public APIs, build commands, boards, or repository layout MUST update the corresponding section of `AI_CONTEXT.md` in the same commit.
+- **Context Maintenance Is Part of Completion**: Before finishing, apply the `CONTEXT_MAINTENANCE_PROTOCOL` in `AI_CONTEXT.md`. A code change is incomplete if it leaves represented context stale. Do not append session notes or conversational history; update the current facts in place.
+- **New Node Work**: When creating a node application, start from `NEW_NODE_RECIPE` and `APPLICATION_SNAPSHOTS` in `AI_CONTEXT.md`, then inspect only the referenced endpoint template and exact public headers/ICD definitions needed by that node.
+
 ## 1. Architectural Boundaries & Permissions
 
 - **Read-Only Access to Core Library**: AI agents are strictly prohibited from modifying the `deos_core` library located in the `lib/` directory. You are only allowed to read it to understand the underlying infrastructure.
