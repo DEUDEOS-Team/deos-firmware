@@ -20,8 +20,6 @@ public:
     LedController led_controller;
     SafetyManager safety_manager;
 
-    void broadcast_lighting_status();
-
 private:
     MainApp() = default;
     ~MainApp() = default;

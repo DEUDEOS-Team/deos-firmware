@@ -43,6 +43,12 @@ extern "C" {
     int set_state_rx_callback(const deos_message_t *msg, void *user_data) {
         MainApp& app = MainApp::getInstance();
         
+        /* Eğer bu mesaj Main STM32'nin kendi yayınladığı genel durum broadcast'i ise,
+         * döngü (loopback) oluşturup gereksiz yanıt basmamak için işlemiyoruz. */
+        if (msg->source == DEOS_NODE_MAIN_STM32) {
+            return 0;
+        }
+
         if (msg->payload_len == 1) {
             deos_state_t req_state = (deos_state_t)msg->payload[0];
             LOG_INF("Received SET_STATE command from %s (0x%02X): requesting state %s", 
@@ -53,6 +59,16 @@ extern "C" {
             LOG_WRN("Invalid SET_STATE payload length: %d", msg->payload_len);
             deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
         }
+        return 0;
+    }
+
+    int get_state_rx_callback(const deos_message_t *msg, void *user_data) {
+        MainApp& app = MainApp::getInstance();
+        deos_state_t current = app.get_state();
+        LOG_INF("Received GET_STATE request from %s (0x%02X), replying with state %s", 
+                deos_node_name(msg->source), msg->source, state_to_str(current));
+        uint8_t state_byte = (uint8_t)current;
+        deos_send_response(msg, DEOS_RESULT_SUCCESS, &state_byte, sizeof(state_byte));
         return 0;
     }
 
@@ -70,7 +86,6 @@ extern "C" {
             if (ret == 0) {
                 struct deos_lighting_status_payload status = app.led_controller.get_status();
                 deos_send_response(msg, DEOS_RESULT_SUCCESS, &status, sizeof(status));
-                app.broadcast_lighting_status();
             } else {
                 deos_send_response(msg, DEOS_RESULT_INVALID_PARAMETER, NULL, 0);
             }
@@ -138,6 +153,10 @@ int MainApp::init() {
 
     /* SET_STATE komutunu (Cmd: 0x02, Class: COMMAND) dinle */
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE, set_state_rx_callback, NULL);
+    deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_SET_STATE, set_state_rx_callback, NULL);
+
+    /* GET_STATE isteğini (Cmd: 0x01, Class: REQUEST) dinle */
+    deos_register_handler(DEOS_CLASS_REQUEST, DEOS_SERVICE_SYSTEM, DEOS_CMD_SYSTEM_GET_STATE, get_state_rx_callback, NULL);
 
     /* LIGHTING (0x08) komut ve durum sorgularını dinle */
     deos_register_handler(DEOS_CLASS_COMMAND, DEOS_SERVICE_LIGHTING, DEOS_CMD_LIGHTING_TURN_ON, lighting_command_rx_callback, NULL);
@@ -179,15 +198,6 @@ void MainApp::set_state(deos_state_t new_state) {
     if (ret != 0) {
         LOG_WRN("Failed to broadcast state %s: %d", state_to_str(new_state), ret);
     }
-
-    /* Durum değiştiğinde aydınlatma durumunu da güncelle ve yayınla */
-    broadcast_lighting_status();
-}
-
-void MainApp::broadcast_lighting_status() {
-    struct deos_lighting_status_payload status = led_controller.get_status();
-    deos_send(DEOS_NODE_CAN_BROADCAST, DEOS_PRIO_STATUS, DEOS_CLASS_STATUS, DEOS_SERVICE_LIGHTING,
-              DEOS_CMD_LIGHTING_STATUS, &status, sizeof(status));
 }
 
 void MainApp::run() {
