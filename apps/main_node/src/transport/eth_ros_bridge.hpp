@@ -27,8 +27,7 @@ private:
     static int tx_callback(const deos_message_t *msg);
 
     int m_sock;
-    struct sockaddr_in m_client_addr;
-    bool m_client_connected;
+    struct sockaddr_in m_bridge_addr{};
 
     struct k_msgq m_tx_q;
     char m_tx_q_buffer[16 * sizeof(deos_message_t)]; // ROS_BRIDGE_TX_QUEUE_SIZE = 16

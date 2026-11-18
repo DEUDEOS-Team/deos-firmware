@@ -215,7 +215,7 @@ Broadcast intent:
 ### ETHERNET
 
 - Textual TCP: `apps/main_node/src/transport/eth_textual.cpp`, routed to `DIAG_TOOL`.
-- ROS UDP: `apps/main_node/src/transport/eth_ros_bridge.cpp`, routed to `ROS_BRIDGE`. Main STM32 listens on UDP port `5001` and learns the bridge address and port from incoming datagrams.
+- ROS UDP: `apps/main_node/src/transport/eth_ros_bridge.cpp`, routed to `ROS_BRIDGE`. Main STM32 binds UDP port `5001` and uses `192.168.1.20:5001` as its fixed peer for sending and receiving.
 - Both use dedicated TX queues/threads. Preserve nonblocking router callbacks.
 
 ## APPLICATION_SNAPSHOTS

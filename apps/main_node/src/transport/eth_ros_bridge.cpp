@@ -11,6 +11,7 @@ LOG_MODULE_REGISTER(eth_ros_bridge, LOG_LEVEL_INF);
 #define ROS_BRIDGE_THREAD_STACK_SIZE 2048
 #define ROS_BRIDGE_THREAD_PRIO 5
 #define ROS_BRIDGE_UDP_PORT 5001
+#define ROS_BRIDGE_IPV4_ADDR "192.168.1.20"
 
 static K_KERNEL_STACK_DEFINE(ros_bridge_rx_stack, ROS_BRIDGE_THREAD_STACK_SIZE);
 static K_KERNEL_STACK_DEFINE(ros_bridge_tx_stack, ROS_BRIDGE_THREAD_STACK_SIZE);
@@ -22,9 +23,8 @@ EthRosBridge& EthRosBridge::getInstance() {
     return instance;
 }
 
-EthRosBridge::EthRosBridge() : m_sock(-1), m_client_connected(false) {
+EthRosBridge::EthRosBridge() : m_sock(-1) {
     k_msgq_init(&m_tx_q, m_tx_q_buffer, sizeof(deos_message_t), ROS_BRIDGE_TX_QUEUE_SIZE);
-    memset(&m_client_addr, 0, sizeof(m_client_addr));
 }
 
 int EthRosBridge::tx_callback(const deos_message_t *msg) {
@@ -50,30 +50,30 @@ void EthRosBridge::tx_thread() {
     LOG_INF("ROS Bridge UDP TX Thread started");
 
     while (1) {
-        if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) == 0) {
-            if (m_sock >= 0 && m_client_connected) {
-                uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
-                int encoded_len = deos_frame_encode(&msg, tx_buf + 1, sizeof(tx_buf) - 1);
-                if (encoded_len > 0) {
-                    tx_buf[0] = static_cast<uint8_t>(encoded_len);
-                    int sent = zsock_sendto(m_sock, tx_buf, encoded_len + 1, 0,
-                                            (struct sockaddr *)&m_client_addr,
-                                            sizeof(m_client_addr));
-                    if (sent < 0) {
-                        LOG_ERR("UDP Send failed (%d)", errno);
-                        deos_fault_raise(DEOS_FAULT_ETH_TX_SEND_FAILED, DEOS_FAULT_SEVERITY_WARNING);
-                    } else {
-                        LOG_DBG("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
-                                deos_node_name(msg.source), msg.source,
-                                deos_node_name(msg.destination), msg.destination,
-                                deos_class_name(msg.message_class),
-                                deos_service_name(msg.service),
-                                msg.command, msg.payload_len);
-                    }
-                } else {
-                    LOG_ERR("Failed to encode universal frame for ROS bridge: %d", encoded_len);
-                }
+        if (k_msgq_get(&m_tx_q, &msg, K_FOREVER) != 0) {
+            continue;
+        }
+
+        uint8_t tx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
+        int encoded_len = deos_frame_encode(&msg, tx_buf + 1, sizeof(tx_buf) - 1);
+        if (encoded_len > 0) {
+            tx_buf[0] = static_cast<uint8_t>(encoded_len);
+            int sent = zsock_sendto(m_sock, tx_buf, encoded_len + 1, 0,
+                                    (const struct sockaddr *)&m_bridge_addr,
+                                    sizeof(m_bridge_addr));
+            if (sent < 0) {
+                LOG_ERR("UDP Send failed (%d)", errno);
+                deos_fault_raise(DEOS_FAULT_ETH_TX_SEND_FAILED, DEOS_FAULT_SEVERITY_WARNING);
+            } else {
+                LOG_DBG("ROS Bridge TX: [%s (0x%02X) -> %s (0x%02X)] Class: %s, Svc: %s, Cmd: 0x%02X, Len: %d",
+                        deos_node_name(msg.source), msg.source,
+                        deos_node_name(msg.destination), msg.destination,
+                        deos_class_name(msg.message_class),
+                        deos_service_name(msg.service),
+                        msg.command, msg.payload_len);
             }
+        } else {
+            LOG_ERR("Failed to encode universal frame for ROS bridge: %d", encoded_len);
         }
     }
 }
@@ -84,27 +84,6 @@ void EthRosBridge::rx_thread_entry(void *p1, void *p2, void *p3) {
 }
 
 void EthRosBridge::rx_thread() {
-    struct sockaddr_in bind_addr;
-
-    m_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (m_sock < 0) {
-        LOG_ERR("Failed to create UDP socket: %d", errno);
-        return;
-    }
-
-    bind_addr.sin_family = AF_INET;
-    bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    bind_addr.sin_port = htons(ROS_BRIDGE_UDP_PORT);
-
-    if (zsock_bind(m_sock, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
-        LOG_ERR("Failed to bind UDP socket: %d", errno);
-        zsock_close(m_sock);
-        m_sock = -1;
-        return;
-    }
-
-    LOG_INF("ROS Bridge UDP Server listening on port %d", ROS_BRIDGE_UDP_PORT);
-
     while (1) {
         uint8_t rx_buf[DEOS_MAX_PAYLOAD_LEN + 30];
         struct sockaddr_in client_addr;
@@ -119,15 +98,9 @@ void EthRosBridge::rx_thread() {
             continue;
         }
 
-        if (!m_client_connected) {
-            m_client_addr = client_addr;
-            m_client_connected = true;
-            LOG_INF("ROS Bridge UDP Client discovered!");
-        } else if (m_client_addr.sin_addr.s_addr != client_addr.sin_addr.s_addr || 
-                   m_client_addr.sin_port != client_addr.sin_port) {
-            // Update client address if a new one sends data
-            m_client_addr = client_addr;
-            LOG_INF("ROS Bridge UDP Client updated.");
+        if (client_addr.sin_addr.s_addr != m_bridge_addr.sin_addr.s_addr ||
+            client_addr.sin_port != m_bridge_addr.sin_port || received == 0) {
+            continue;
         }
 
         uint8_t rx_len = rx_buf[0];
@@ -141,6 +114,32 @@ void EthRosBridge::rx_thread() {
 }
 
 int EthRosBridge::init() {
+    m_bridge_addr.sin_family = AF_INET;
+    m_bridge_addr.sin_port = htons(ROS_BRIDGE_UDP_PORT);
+    if (zsock_inet_pton(AF_INET, ROS_BRIDGE_IPV4_ADDR, &m_bridge_addr.sin_addr) != 1) {
+        LOG_ERR("Invalid ROS Bridge IPv4 address");
+        return -EINVAL;
+    }
+
+    m_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (m_sock < 0) {
+        const int error = errno;
+        LOG_ERR("Failed to create UDP socket: %d", error);
+        return -error;
+    }
+
+    struct sockaddr_in bind_addr{};
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    bind_addr.sin_port = htons(ROS_BRIDGE_UDP_PORT);
+    if (zsock_bind(m_sock, (struct sockaddr *)&bind_addr, sizeof(bind_addr)) < 0) {
+        const int error = errno;
+        LOG_ERR("Failed to bind UDP socket: %d", error);
+        zsock_close(m_sock);
+        m_sock = -1;
+        return -error;
+    }
+
     deos_router_register_transport(DEOS_TRANSPORT_ETH_ROS_BRIDGE, tx_callback);
 
     k_thread_create(&ros_bridge_tx_thread_data, ros_bridge_tx_stack,
@@ -153,6 +152,7 @@ int EthRosBridge::init() {
                     rx_thread_entry, this, NULL, NULL,
                     ROS_BRIDGE_THREAD_PRIO, 0, K_NO_WAIT);
 
-    LOG_INF("ROS Bridge UDP interface initialized");
+    LOG_INF("ROS Bridge UDP port %d, peer %s:%d", ROS_BRIDGE_UDP_PORT,
+            ROS_BRIDGE_IPV4_ADDR, ROS_BRIDGE_UDP_PORT);
     return 0;
 }
