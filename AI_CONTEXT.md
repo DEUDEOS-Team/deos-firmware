@@ -234,6 +234,8 @@ critical_watchdog_nodes: [BMS_MAIN, BMS_AUX, TRACTION, BRAKE, STEERING]
 
 Registered application handlers include heartbeat, `SET_STATE` as COMMAND and REQUEST, `GET_STATE` as REQUEST, and lighting commands/status request. Core handles some system behavior automatically; inspect dispatch before duplicating PING/PONG or subscription logic. `MainApp::set_state` applies local LED safety behavior before broadcasting so transport trouble cannot delay local SAFE indication. LED shared state is mutex-protected.
 
+The hosted IMU registers a SENSORS/IMU_DATA REQUEST handler. Each call returns one placeholder STATUS sample to the requester. Periodic subscriptions invoke this handler through the core subscription scheduler.
+
 ### traction
 
 ```yaml
