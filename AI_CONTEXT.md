@@ -215,7 +215,7 @@ Broadcast intent:
 ### ETHERNET
 
 - Textual TCP: `apps/main_node/src/transport/eth_textual.cpp`, routed to `DIAG_TOOL`.
-- ROS UDP: `apps/main_node/src/transport/eth_ros_bridge.cpp`, routed to `ROS_BRIDGE`.
+- ROS UDP: `apps/main_node/src/transport/eth_ros_bridge.cpp`, routed to `ROS_BRIDGE`. Main STM32 listens on UDP port `5001` and learns the bridge address and port from incoming datagrams.
 - Both use dedicated TX queues/threads. Preserve nonblocking router callbacks.
 
 ## APPLICATION_SNAPSHOTS
@@ -227,6 +227,7 @@ primary_node: MAIN_STM32_0x03
 router: true
 hosted_nodes: [IMU_0x13]
 transports: [CAN_FD, UART_LORA, ETH_TEXTUAL, ETH_ROS_BRIDGE]
+ethernet_ipv4: 192.168.1.10
 state_storage: Zephyr atomic_t
 state_authority: MainApp.set_state
 critical_watchdog_nodes: [BMS_MAIN, BMS_AUX, TRACTION, BRAKE, STEERING]
