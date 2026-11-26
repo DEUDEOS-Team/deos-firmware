@@ -7,7 +7,7 @@ repository: DEUDEOS-Team/deos-firmware
 snapshot:
   firmware: 670da617c1cd35b671ae5430a7cb7b1729160fa0
   docs: 1c055d51d896203906c6e77dfd794324eefba348
-  deos_core: 617d7ffe6dca3ac7fd8c804b9240b21b11cbaad8
+  deos_core: c0051b7548b03c09d4e4716730ed0451c8975266
   deos_protocol: 70d846f0320d189f8a35242490a2ca1f841c6446
   deos_transport_can: 8199e1a7b2bcef8b584edcca7df0fe51bcc7f1da
 confidence_rule: source-code-overrides-this-file
