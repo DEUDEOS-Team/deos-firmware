@@ -23,13 +23,13 @@ target_sources(app PRIVATE
     ../../lib/deos_core/src/deos_core.c
     ../../lib/deos_core/src/deos_send.c
     ../../lib/deos_core/src/deos_dispatch.c
-    ../../lib/deos_core/src/deos_codec.c
     ../../lib/deos_core/src/deos_network.c
     ../../lib/deos_core/src/deos_router.c
     ../../lib/deos_core/src/deos_fault.c
     ../../lib/deos_core/src/deos_subscription.c
-    ../../lib/deos_core/src/deos_frame.c
-    ../../lib/deos_core/src/deos_registry.c
+    ../../lib/deos_protocol/src/deos_codec.c
+    ../../lib/deos_protocol/src/deos_frame.c
+    ../../lib/deos_protocol/src/deos_registry.c
     ../../lib/deos_transport_can/src/deos_can_transport.c
     ../../lib/deos_transport_can/src/deos_can_codec.c
 )

@@ -90,12 +90,12 @@ public:
   void checkCommStatus() {
     bool current_online = isOnline();
     if (!current_online && !comm_fault_raised) {
-      uint16_t fault_id = (daly_board_number == DALY_BOARD_MAIN) ? DEOS_GW_FAULT_MAIN_COMM_LOST : DEOS_GW_FAULT_AUX_COMM_LOST;
+      uint16_t fault_id = (daly_board_number == DALY_BOARD_MAIN) ? DEOS_FAULT_GW_MAIN_COMM_LOST : DEOS_FAULT_GW_AUX_COMM_LOST;
       deos_fault_raise_for_node(DEOS_NODE_BMS_GATEWAY, fault_id, DEOS_FAULT_SEVERITY_ERROR);
       comm_fault_raised = true;
       LOG_ERR("BMS Board %d Comm Lost! Raising Fault 0x%04X", daly_board_number, fault_id);
     } else if (current_online && comm_fault_raised) {
-      uint16_t fault_id = (daly_board_number == DALY_BOARD_MAIN) ? DEOS_GW_FAULT_MAIN_COMM_LOST : DEOS_GW_FAULT_AUX_COMM_LOST;
+      uint16_t fault_id = (daly_board_number == DALY_BOARD_MAIN) ? DEOS_FAULT_GW_MAIN_COMM_LOST : DEOS_FAULT_GW_AUX_COMM_LOST;
       deos_fault_set_inactive_for_node(DEOS_NODE_BMS_GATEWAY, fault_id);
       comm_fault_raised = false;
       LOG_INF("BMS Board %d Comm Restored. Clearing Fault 0x%04X", daly_board_number, fault_id);
@@ -433,13 +433,13 @@ void BmsDevice::updateAlarms(const DalyAlarmInfo &info) {
       }
   };
 
-  handle_fault(info.pack_overvoltage, DEOS_BMS_FAULT_PACK_OVERVOLTAGE, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.pack_undervoltage, DEOS_BMS_FAULT_PACK_UNDERVOLTAGE, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.charge_overcurrent, DEOS_BMS_FAULT_CHARGE_OVERCURRENT, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.discharge_overcurrent, DEOS_BMS_FAULT_DISCHARGE_OVERCURRENT, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.overtemperature, DEOS_BMS_FAULT_OVERTEMPERATURE, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.undertemperature, DEOS_BMS_FAULT_UNDERTEMPERATURE, DEOS_FAULT_SEVERITY_CRITICAL);
-  handle_fault(info.bms_internal_fault, DEOS_BMS_FAULT_INTERNAL_ERROR, DEOS_FAULT_SEVERITY_ERROR);
+  handle_fault(info.pack_overvoltage, DEOS_FAULT_BMS_PACK_OVERVOLTAGE, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.pack_undervoltage, DEOS_FAULT_BMS_PACK_UNDERVOLTAGE, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.charge_overcurrent, DEOS_FAULT_BMS_CHARGE_OVERCURRENT, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.discharge_overcurrent, DEOS_FAULT_BMS_DISCHARGE_OVERCURRENT, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.overtemperature, DEOS_FAULT_BMS_OVERTEMPERATURE, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.undertemperature, DEOS_FAULT_BMS_UNDERTEMPERATURE, DEOS_FAULT_SEVERITY_CRITICAL);
+  handle_fault(info.bms_internal_fault, DEOS_FAULT_BMS_INTERNAL_ERROR, DEOS_FAULT_SEVERITY_ERROR);
 }
 
 K_MSGQ_DEFINE(daly_can_rx_queue, sizeof(struct can_frame), 32, 4);

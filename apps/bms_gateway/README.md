@@ -81,19 +81,20 @@ Daly'den gelen tescilli 8-byte payload'lar, `ICD_BMS.tex` dökümanına tam uyum
 
 BMS Gateway, hem donanımsal iletişim hatlarına hem de batarya paketlerinin güvenliğine dair tam teşekküllü bir **Fault Supervisor** görevi görür. Hatalar (Faults), oluştukları katmana göre farklı Node ID'ler ile fırlatılır.
 
-### Gateway Spesifik Hatalar (Node: `0x30`)
+### Gateway Hataları (Node: `0x30`, Global ICD `0x0500+`)
 Eğer Gateway, BMS'lerin birinden fiziksel olarak veri alamazsa (`BMS_TIMEOUT_MS` aşılırsa), doğrudan iletişim koptuğunu ilan eder:
-- `DEOS_GW_FAULT_MAIN_COMM_LOST (0x0100)`: Ana batarya ile iletişim kesildi!
-- `DEOS_GW_FAULT_AUX_COMM_LOST (0x0101)`: Yedek batarya ile iletişim kesildi!
+- `DEOS_FAULT_GW_MAIN_COMM_LOST (0x0500)`: Ana batarya ile iletişim kesildi!
+- `DEOS_FAULT_GW_AUX_COMM_LOST (0x0501)`: Yedek batarya ile iletişim kesildi!
 
-### Batarya Sensör Hataları (Node: `0x20` / `0x21`)
+### Batarya Sensör Hataları (Node: `0x20` / `0x21`, Global ICD `0x0400+`)
 Gateway, Daly `0x98` Alarm frame'ini çözdüğünde (Parse) fiziksel bir tehlike sezerse (Örn: Hücre voltajı çok yükselmişse), hatayı *Gateway olarak değil*, tehlikede olan *Batarya olarak* bildirir:
-- `DEOS_BMS_FAULT_PACK_OVERVOLTAGE (0x0100)`
-- `DEOS_BMS_FAULT_PACK_UNDERVOLTAGE (0x0101)`
-- `DEOS_BMS_FAULT_CHARGE_OVERCURRENT (0x0102)`
-- `DEOS_BMS_FAULT_DISCHARGE_OVERCURRENT (0x0103)`
-- `DEOS_BMS_FAULT_OVERTEMPERATURE (0x0104)`
-- `DEOS_BMS_FAULT_INTERNAL_ERROR (0x0107)`
+- `DEOS_FAULT_BMS_PACK_OVERVOLTAGE (0x0400)`
+- `DEOS_FAULT_BMS_PACK_UNDERVOLTAGE (0x0401)`
+- `DEOS_FAULT_BMS_CHARGE_OVERCURRENT (0x0402)`
+- `DEOS_FAULT_BMS_DISCHARGE_OVERCURRENT (0x0403)`
+- `DEOS_FAULT_BMS_OVERTEMPERATURE (0x0404)`
+- `DEOS_FAULT_BMS_UNDERTEMPERATURE (0x0405)`
+- `DEOS_FAULT_BMS_INTERNAL_ERROR (0x0407)`
 
 Gateway iletişim veya tehlike durumu düzeldiğinde, otonom olarak `deos_fault_set_inactive()` komutunu göndererek hatayı temizler.
 

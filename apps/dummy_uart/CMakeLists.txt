@@ -11,8 +11,8 @@ project(dummy_uart)
 
 target_sources(app PRIVATE 
     src/main.c
-    ../../lib/deos_core/src/deos_frame.c
+    ../../lib/deos_protocol/src/deos_frame.c
 )
 
-# We need the DEOS Core library to use deos_message_t
-target_include_directories(app PRIVATE ../../lib/deos_core/include)
+# We need the DEOS Core & Protocol libraries to use deos_message_t
+target_include_directories(app PRIVATE ../../lib/deos_core/include ../../lib/deos_protocol/include)
