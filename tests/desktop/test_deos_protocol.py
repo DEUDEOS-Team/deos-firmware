@@ -76,11 +76,11 @@ def test_c_library_bindings():
 
     # Python fonksiyonunu C motoruna bağla:
     reg_ret = registry.register(
+        target_node=deos.NODE_TRACTION,
         message_class=deos.CLASS_COMMAND,
         service=deos.SERVICE_TRACTION,
         command=deos.CMD_TRACTION_SET_TARGET_SPEED,
         callback=on_traction_speed_command,
-        target_node=deos.NODE_TRACTION
     )
     assert reg_ret == 0
 

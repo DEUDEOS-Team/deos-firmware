@@ -134,8 +134,9 @@ int main() {
     deos_registry_t registry;
     deos_registry_init(&registry);
 
-    int reg_ret1 = deos_registry_register(
+    int reg_ret1 = deos_registry_register_for_node(
         &registry,
+        DEOS_NODE_TRACTION,
         DEOS_CLASS_COMMAND,
         DEOS_SERVICE_TRACTION,
         DEOS_CMD_TRACTION_SET_TARGET_SPEED,
@@ -144,8 +145,9 @@ int main() {
     );
     assert(reg_ret1 == 0);
 
-    int reg_ret2 = deos_registry_register(
+    int reg_ret2 = deos_registry_register_for_node(
         &registry,
+        DEOS_NODE_ROS_BRIDGE,
         DEOS_CLASS_STATUS,
         DEOS_SERVICE_LIGHTING,
         DEOS_CMD_LIGHTING_STATUS,
