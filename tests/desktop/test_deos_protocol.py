@@ -65,8 +65,8 @@ def test_c_library_bindings():
     assert rx_msg.payload == b'\xdc\x05'
     print(f"[4] C deos_frame_decode Çağrıldı! Çözülen Mesaj: {rx_msg}")
 
-    # 5. C Motoru `deos_registry_register` ve `deos_registry_dispatch` Doğrulaması
-    registry = deos.DeosRegistry()
+    # 5. C Motoru `deos_registry_register_for_node` ve `deos_registry_dispatch` Doğrulaması
+    registry = deos.DeosRegistry(deos.NODE_TRACTION)
     received_in_callback = []
 
     def on_traction_speed_command(msg: deos.DeosMessage):
@@ -76,7 +76,6 @@ def test_c_library_bindings():
 
     # Python fonksiyonunu C motoruna bağla:
     reg_ret = registry.register(
-        target_node=deos.NODE_TRACTION,
         message_class=deos.CLASS_COMMAND,
         service=deos.SERVICE_TRACTION,
         command=deos.CMD_TRACTION_SET_TARGET_SPEED,
