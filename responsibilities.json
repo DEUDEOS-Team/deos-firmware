@@ -56,7 +56,7 @@
       "owner": "Emir Arkalı",
       "repo": "DEUDEOS-Team/deos-transport-can",
       "path": null,
-      "role": "STM32 FDCAN çevre birimi sürücüsü ve 29-bit CAN ID filtreleme motoru.",
+      "role": "STM32 FDCAN çevre birimi sürücüsü ve 29-bit CAN ID filtreleme motoru.",  
       "status_note": "STM32 FDCAN çevre birimi sürücüsü ayrıştırıldı, testler sürüyor."
     },
     {
@@ -85,7 +85,7 @@
       "repo": "DEUDEOS-Team/deos-ground-station",
       "path": null,
       "role": "PyQt tabanlı telemetri izleme ve araç komuta kontrol masaüstü yazılımı.",
-      "status_note": "PyQt telemetri arayüzü ve LoRa haberleşmesi aktif, saha testleri yapılıyor."
+      "status_note": "Kütüpane bağımsız arayüz sayfası aktif geliştirilme aşamasında."
     },
     {
       "id": "ROS",
@@ -169,7 +169,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/main_node",
       "role": "Araç içi merkezi ağ geçidi ve yönlendirici (Nucleo-H563ZI).",
-      "status_note": "Router motoru ve Split-Horizon yönlendirici devrede, saha testleri yapılıyor."
+      "status_note": "Router motoru ve Split-Horizon yönlendirici devrede, transport testleri yapılıyor."
     },
     {
       "id": "LORA",
@@ -197,7 +197,7 @@
       "repo": "DEUDEOS-Team/deos-transport-can",
       "path": null,
       "role": "Araç içi 5 Mbps yüksek hızlı diferansiyel CAN-FD veri yolu omurgası.",
-      "status_note": "5 Mbps diferansiyel CAN-FD fiziksel omurgası aktif."
+      "status_note": "CANFD testi yapıldı (başarılı)."
     },
     {
       "id": "TRACTION",
@@ -211,7 +211,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/traction",
       "role": "Çekiş / İnvertör kontrolü, tork ve hız talepleri (CAN ID: 0x10).",
-      "status_note": "Tork ve hız kontrol algoritmaları test ediliyor."
+      "status_note": "İtki ECU henüz yazılmaya başlanılmadı."
     },
     {
       "id": "BRAKE",
@@ -225,7 +225,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/brake",
       "role": "Fren aktüatörü kontrolü, hidrolik basınç ve güvenlik mandalı.",
-      "status_note": "Fren aktüatörü kontrolü ve hidrolik basınç güvenliği devrede."
+      "status_note": "Fren aktüatörü kontrol komutları henüz yazılmaya başlanılmadı."
     },
     {
       "id": "STEERING",
@@ -239,7 +239,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/steering",
       "role": "Steer-by-Wire direksiyon açı kontrolü ve enkoder takibi (CAN ID: 0x11).",
-      "status_note": "Steer-by-Wire açı kontrolü ve enkoder geri beslemesi optimize ediliyor."
+      "status_note": "Steering node kodları yazılmaya henüz başlanmadı."
     },
     {
       "id": "BMS_GW",
@@ -253,7 +253,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/bms_gateway",
       "role": "Batarya yönetim sistemi ağ geçidi, hücre voltaj ve sıcaklık takibi (CAN ID: 0x30).",
-      "status_note": "Hücre voltaj okuma ve güvenlik eşikleri devrede, donanım testleri sürüyor."
+      "status_note": "BMS Gateway kodları yazılmaya daha başlanılmadı."
     },
     {
       "id": "BMS1",
@@ -267,7 +267,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/bms_gateway",
       "role": "1. Batarya paketi hücre voltaj ve sıcaklık izleme ünitesi.",
-      "status_note": "Donanım testleri sürüyor."
+      "status_note": "BMS Gateway kodları yazılmaya daha başlanılmadı."
     },
     {
       "id": "BMS2",
@@ -281,7 +281,7 @@
       "repo": "DEUDEOS-Team/deos-firmware",
       "path": "apps/bms_gateway",
       "role": "2. Batarya paketi hücre voltaj ve sıcaklık izleme ünitesi.",
-      "status_note": "Donanım testleri sürüyor."
+      "status_note": "BMS Gateway kodları yazılmaya daha başlanılmadı."
     },
     {
       "id": "BT",
@@ -309,7 +309,7 @@
       "repo": null,
       "path": null,
       "role": "Bluetooth üzerinden araç sürüş komutları ileten kablosuz gamepad kumandası.",
-      "status_note": "Manuel test ve kontrol kumandası harici donanım olarak devrede."
+      "status_note": "Planlama aşamasında."
     }
   ]
 }
